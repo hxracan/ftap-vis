@@ -6,9 +6,38 @@ local Lighting = game:GetService("Lighting")
 local HttpService = game:GetService("HttpService")
 
 local LocalPlayer = Players.LocalPlayer
-local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/Library.lua"))()
-local Options = Library.Options
-local Toggles = Library.Toggles
+local ObsidianRepo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/"
+local Compile = loadstring or load
+if type(Compile) ~= "function" then
+    error("Pallet EIK: this executor does not provide loadstring/load, so the Obsidian UI library cannot be loaded.")
+end
+local LibrarySource
+local HttpSuccess, HttpResult = pcall(function()
+    return game:HttpGet(ObsidianRepo .. "Library.lua")
+end)
+if not HttpSuccess or type(HttpResult) ~= "string" or #HttpResult < 1000 then
+    error("Pallet EIK: failed to download the Obsidian Library.lua file. HTTP result was invalid.")
+end
+LibrarySource = HttpResult
+local LibraryChunk, LibraryCompileError = Compile(LibrarySource)
+if type(LibraryChunk) ~= "function" then
+    error("Pallet EIK: Obsidian Library.lua failed to compile: " .. tostring(LibraryCompileError))
+end
+local LibraryOk, LibraryResult = pcall(LibraryChunk)
+if not LibraryOk then
+    error("Pallet EIK: Obsidian Library.lua threw an error while loading: " .. tostring(LibraryResult))
+end
+local Library = LibraryResult
+if type(Library) ~= "table" then
+    error("Pallet EIK: Obsidian Library.lua returned an invalid value: " .. typeof(Library))
+end
+if type(Library.CreateWindow) ~= "function" then
+    error("Pallet EIK: loaded Obsidian library does not expose CreateWindow. Use the official main branch Library.lua.")
+end
+local Options = Library.Options or {}
+local Toggles = Library.Toggles or {}
+Library.Options = Options
+Library.Toggles = Toggles
 
 local Window = Library:CreateWindow({
     Title = "Pallet EIK",
@@ -2546,6 +2575,7 @@ task.defer(function()
     refreshGrabLine()
 end)
 
+if type(Library.OnUnload) == "function" then
 Library:OnUnload(function()
     DETECTION_ENABLED=false SnowEnabled=false restoreAll() restoreLighting()
     if SnowPart then SnowPart:Destroy() SnowPart=nil SnowEmitter=nil end
@@ -2554,3 +2584,4 @@ Library:OnUnload(function()
     table.clear(Pallets)
     table.clear(PalletState)
 end)
+end
