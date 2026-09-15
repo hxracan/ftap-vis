@@ -1,118 +1,156 @@
-local Workspace = game:GetService("Workspace")
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
-local Lighting = game:GetService("Lighting")
-local HttpService = game:GetService("HttpService")
+Workspace = game:GetService("Workspace")
+Players = game:GetService("Players")
+RunService = game:GetService("RunService")
+TweenService = game:GetService("TweenService")
+Lighting = game:GetService("Lighting")
+HttpService = game:GetService("HttpService")
 
-local LocalPlayer = Players.LocalPlayer
-local ObsidianRepo = "https://raw.githubusercontent.com/deividcomsono/Obsidian/refs/heads/main/"
-local Compile = loadstring or load
-if type(Compile) ~= "function" then
-    error("Pallet EIK: this executor does not provide loadstring/load, so the Obsidian UI library cannot be loaded.")
+LocalPlayer = Players.LocalPlayer
+ObsidianUrl = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/Library.lua"
+if type(loadstring) ~= "function" then
+    error("hi")
 end
-local LibrarySource
-local HttpSuccess, HttpResult = pcall(function()
-    return game:HttpGet(ObsidianRepo .. "Library.lua")
-end)
-if not HttpSuccess or type(HttpResult) ~= "string" or #HttpResult < 1000 then
-    error("Pallet EIK: failed to download the Obsidian Library.lua file. HTTP result was invalid.")
+Library = nil
+do
+    local ok, result = pcall(function()
+        return loadstring(game:HttpGet(ObsidianUrl))()
+    end)
+    if not ok then
+        error("Pallet EIK: Obsidian failed to load: " .. tostring(result))
+    end
+    Library = result
 end
-LibrarySource = HttpResult
-local LibraryChunk, LibraryCompileError = Compile(LibrarySource)
-if type(LibraryChunk) ~= "function" then
-    error("Pallet EIK: Obsidian Library.lua failed to compile: " .. tostring(LibraryCompileError))
-end
-local LibraryOk, LibraryResult = pcall(LibraryChunk)
-if not LibraryOk then
-    error("Pallet EIK: Obsidian Library.lua threw an error while loading: " .. tostring(LibraryResult))
-end
-local Library = LibraryResult
 if type(Library) ~= "table" then
-    error("Pallet EIK: Obsidian Library.lua returned an invalid value: " .. typeof(Library))
+    error("Pallet EIK: Obsidian returned an invalid Library object.")
 end
 if type(Library.CreateWindow) ~= "function" then
-    error("Pallet EIK: loaded Obsidian library does not expose CreateWindow. Use the official main branch Library.lua.")
+    error("Pallet EIK: this is not the official Obsidian Library.lua. CreateWindow is missing.")
 end
-local Options = Library.Options or {}
-local Toggles = Library.Toggles or {}
-Library.Options = Options
-Library.Toggles = Toggles
 
-local Window = Library:CreateWindow({
-    Title = "Pallet EIK",
-    Footer = "Beam Detection",
-    Center = true,
-    AutoShow = true,
-    Resizable = true,
-    ShowCustomCursor = true,
-})
+Options = Library.Options
+Toggles = Library.Toggles
 
-local MainTab = Window:AddTab("Main", "home")
-local SettingsTab = Window:AddTab("Settings", "settings")
-local TimeTab = Window:AddTab("Time", "sun")
-local VisualsTab = Window:AddTab("Visuals", "eye")
-local KeybindsTab = Window:AddTab("Keybinds", "keyboard")
+function requireMethod(object, name, label)
+    local method = object and object[name]
+    if type(method) ~= "function" then
+        error("Pallet EIK: Obsidian API mismatch. Missing " .. label .. ": " .. name)
+    end
+    return method
+end
 
-local BeamSection = MainTab:AddLeftGroupbox("Beam Detection")
-local UtilitySection = MainTab:AddRightGroupbox("Utility")
-local PalletColorSection = MainTab:AddLeftGroupbox("Pallet Color")
-local EIKSection = MainTab:AddRightGroupbox("Pallet Text")
+okWindow, Window = pcall(function()
+    return Library:CreateWindow({
+        Title = "i l-l-loveee huracan",
+        Footer = "h-h-hhothuracan",
+        Center = true,
+        AutoShow = true,
+        Resizable = true,
+        ShowCustomCursor = true,
+    })
+end)
+if not okWindow then
+    error("Pallet EIK: CreateWindow failed: " .. tostring(Window))
+end
+if not Window then
+    error("Pallet EIK: CreateWindow returned nil.")
+end
 
-local CameraSection = SettingsTab:AddLeftGroupbox("Camera")
-local GrabLineSection = SettingsTab:AddRightGroupbox("Grab Line")
-local GrabLineUtilitySection = SettingsTab:AddLeftGroupbox("Grab Line Utility")
+function addTab(name, icon)
+    requireMethod(Window, "AddTab", "Window:AddTab")
+    local ok, tab = pcall(function()
+        return Window:AddTab(name, icon)
+    end)
+    if not ok or not tab then
+        error("Pallet EIK: failed to create tab " .. name .. ": " .. tostring(tab))
+    end
+    return tab
+end
 
-local TimeSection = TimeTab:AddLeftGroupbox("Time")
-local LightingSection = TimeTab:AddRightGroupbox("Lighting")
+function addGroup(tab, side, name)
+    local preferred = side == "Left" and "AddLeftGroupbox" or "AddRightGroupbox"
+    if type(tab[preferred]) == "function" then
+        local ok, group = pcall(function()
+            return tab[preferred](tab, name)
+        end)
+        if ok and group then
+            return group
+        end
+    end
+    requireMethod(tab, "AddGroupbox", "Tab:AddGroupbox")
+    local ok, group = pcall(function()
+        return tab:AddGroupbox({Side = side, Name = name})
+    end)
+    if not ok or not group then
+        error("Pallet EIK: failed to create groupbox " .. name .. ": " .. tostring(group))
+    end
+    return group
+end
 
-local WeatherSection = VisualsTab:AddLeftGroupbox("Weather")
-local VisualSettingsSection = VisualsTab:AddRightGroupbox("Visual Settings")
+MainTab = addTab("Main", "home")
+SettingsTab = addTab("Settings", "settings")
+TimeTab = addTab("Time", "sun")
+VisualsTab = addTab("Visuals", "eye")
+KeybindsTab = addTab("Keybinds", "keyboard")
 
-local MenuKeySection = KeybindsTab:AddLeftGroupbox("Menu Key")
-local ScriptSection = KeybindsTab:AddRightGroupbox("Script")
+BeamSection = addGroup(MainTab, "Left", "Beam Detection")
+UtilitySection = addGroup(MainTab, "Right", "Utility")
+PalletColorSection = addGroup(MainTab, "Left", "Pallet Color")
+EIKSection = addGroup(MainTab, "Right", "Pallet Text")
 
-local TARGET_NAME = "PalletLightBrown"
-local NORMAL_COLOR = Color3.fromRGB(234, 215, 198)
-local PALLET_CHANGE_COLOR = Color3.fromRGB(0, 0, 0)
-local FADE_TIME = 0.22
-local RELEASE_CONFIRM_TIME = 0.12
-local CHECK_INTERVAL = 0.08
-local DETECTION_ENABLED = true
+CameraSection = addGroup(SettingsTab, "Left", "Camera")
+GrabLineSection = addGroup(SettingsTab, "Right", "Grab Line")
+GrabLineUtilitySection = addGroup(SettingsTab, "Left", "Grab Line Utility")
 
-local EIK_SCALE = 1
-local EIK_X = 0
-local EIK_Y = 0
-local EIK_Z = 0
-local EIK_THICKNESS = 2
-local EIK_TEXT = "EIK"
-local EIK_TEXT_COLOR = Color3.fromRGB(255, 255, 255)
+TimeSection = addGroup(TimeTab, "Left", "Time")
+LightingSection = addGroup(TimeTab, "Right", "Lighting")
 
-local DEFAULT_FOV = 70
-local CurrentFOV = DEFAULT_FOV
-local CurrentTime = Lighting.ClockTime
-local CurrentBrightness = Lighting.Brightness
-local CurrentExposure = Lighting.ExposureCompensation
-local CurrentAmbient = Lighting.Ambient
-local CurrentOutdoorAmbient = Lighting.OutdoorAmbient
+WeatherSection = addGroup(VisualsTab, "Left", "Weather")
+VisualSettingsSection = addGroup(VisualsTab, "Right", "Visual Settings")
 
-local GreySkyEnabled = false
-local SnowEnabled = false
-local SnowRange = 100
-local SnowAmount = 150
-local SnowSpeed = 12
+MenuKeySection = addGroup(KeybindsTab, "Left", "Menu Key")
+ScriptSection = addGroup(KeybindsTab, "Right", "Script")
 
-local Pallets = {}
-local PalletState = {}
-local EIK_DATA = {}
-local BeamPart = nil
-local CurrentBeam = nil
-local SnowPart = nil
-local SnowEmitter = nil
+TARGET_NAME = "PalletLightBrown"
+NORMAL_COLOR = Color3.fromRGB(234, 215, 198)
+PALLET_CHANGE_COLOR = Color3.fromRGB(0, 0, 0)
+FADE_TIME = 0.22
+RELEASE_CONFIRM_TIME = 0.12
+CHECK_INTERVAL = 0.08
+DETECTION_ENABLED = true
 
-local SETTINGS_FILE = "EIK_Pallet_Settings.json"
+EIK_SCALE = 1
+EIK_X = 0
+EIK_Y = 0
+EIK_Z = 0
+EIK_THICKNESS = 2
+EIK_TEXT = "EIK"
+EIK_TEXT_COLOR = Color3.fromRGB(255, 255, 255)
 
-local OriginalLighting = {
+DEFAULT_FOV = 70
+CurrentFOV = DEFAULT_FOV
+CurrentTime = Lighting.ClockTime
+CurrentBrightness = Lighting.Brightness
+CurrentExposure = Lighting.ExposureCompensation
+CurrentAmbient = Lighting.Ambient
+CurrentOutdoorAmbient = Lighting.OutdoorAmbient
+
+GreySkyEnabled = false
+SnowEnabled = false
+SnowRange = 100
+SnowAmount = 150
+SnowSpeed = 12
+
+Pallets = {}
+PalletState = {}
+EIK_DATA = {}
+BeamPart = nil
+CurrentBeam = nil
+SnowPart = nil
+SnowEmitter = nil
+
+SETTINGS_FILE = "EIK_Pallet_Settings.json"
+
+OriginalLighting = {
     ClockTime = Lighting.ClockTime,
     Brightness = Lighting.Brightness,
     ExposureCompensation = Lighting.ExposureCompensation,
@@ -120,8 +158,8 @@ local OriginalLighting = {
     OutdoorAmbient = Lighting.OutdoorAmbient,
 }
 
-local OriginalAtmosphereObject = Lighting:FindFirstChildOfClass("Atmosphere")
-local OriginalAtmosphere = OriginalAtmosphereObject and {
+OriginalAtmosphereObject = Lighting:FindFirstChildOfClass("Atmosphere")
+OriginalAtmosphere = OriginalAtmosphereObject and {
     Object = OriginalAtmosphereObject,
     Color = OriginalAtmosphereObject.Color,
     Decay = OriginalAtmosphereObject.Decay,
@@ -130,7 +168,7 @@ local OriginalAtmosphere = OriginalAtmosphereObject and {
     Glare = OriginalAtmosphereObject.Glare,
 }
 
-local function loadSettings()
+function loadSettings()
     if not isfile or not readfile or not isfile(SETTINGS_FILE) then return end
     local ok, data = pcall(function()
         return HttpService:JSONDecode(readfile(SETTINGS_FILE))
@@ -140,7 +178,7 @@ local function loadSettings()
     end
 end
 
-local function saveSettings()
+function saveSettings()
     if not writefile then return end
     pcall(function()
         writefile(SETTINGS_FILE, HttpService:JSONEncode({FOV = CurrentFOV}))
@@ -149,7 +187,7 @@ end
 
 loadSettings()
 
-local function applyFOV()
+function applyFOV()
     local camera = Workspace.CurrentCamera
     if camera then camera.FieldOfView = CurrentFOV end
 end
@@ -157,21 +195,21 @@ end
 applyFOV()
 Workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function() task.defer(applyFOV) end)
 
-local function getBeamPart()
+function getBeamPart()
     local grabParts = Workspace:FindFirstChild("GrabParts")
     if not grabParts then return nil end
     local beamPart = grabParts:FindFirstChild("BeamPart")
     return beamPart and beamPart:IsA("BasePart") and beamPart or nil
 end
 
-local function getGrabBeam()
+function getGrabBeam()
     local beamPart = getBeamPart()
     if not beamPart then return nil end
     local beam = beamPart:FindFirstChild("GrabBeam")
     return beam and beam:IsA("Beam") and beam or nil
 end
 
-local GrabLinePresets = {
+GrabLinePresets = {
     ["Low Quality"] = {Texture = "", TextureLength = 1, TextureSpeed = 0, Segments = 10, Width0 = .35, Width1 = .35, Transparency = NumberSequence.new(0)},
     ["Non-Gamepass"] = {Texture = "rbxassetid://8933346550", TextureLength = 2, TextureSpeed = -4, Segments = 20, Width0 = .35, Width1 = .35, Transparency = NumberSequence.new(0)},
     ["Gamepass"] = {Texture = "rbxassetid://8933355899", TextureLength = 2, TextureSpeed = -4, Segments = 20, Width0 = .35, Width1 = .35, Transparency = NumberSequence.new(0)},
@@ -183,9 +221,9 @@ local GrabLinePresets = {
     ["Spring"] = {Texture = "rbxassetid://18837732116", TextureLength = 2.2, TextureSpeed = -4.5, Segments = 25, Width0 = .3, Width1 = .3, Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0,1),NumberSequenceKeypoint.new(.05,.05),NumberSequenceKeypoint.new(.95,.05),NumberSequenceKeypoint.new(1,1)})},
 }
 
-local CurrentGrabLineTexture = "Low Quality"
+CurrentGrabLineTexture = "Low Quality"
 
-local function applyBeamSettings(beam, settings)
+function applyBeamSettings(beam, settings)
     if not beam or not beam.Parent then return end
     beam.Texture = settings.Texture
     beam.TextureMode = Enum.TextureMode.Wrap
@@ -201,13 +239,13 @@ local function applyBeamSettings(beam, settings)
     beam.FaceCamera = true
 end
 
-local function refreshGrabLine()
+function refreshGrabLine()
     BeamPart = getBeamPart()
     CurrentBeam = getGrabBeam()
     if CurrentBeam then applyBeamSettings(CurrentBeam, GrabLinePresets[CurrentGrabLineTexture]) end
 end
 
-local function watchGrabParts(grabParts)
+function watchGrabParts(grabParts)
     if not grabParts then return end
     task.spawn(function()
         local beamPart = grabParts:WaitForChild("BeamPart", 5)
@@ -227,11 +265,11 @@ Workspace.DescendantRemoving:Connect(function(obj)
     if obj == CurrentBeam or obj == BeamPart or obj.Name == "GrabBeam" or obj.Name == "BeamPart" or obj.Name == "GrabParts" then task.defer(refreshGrabLine) end
 end)
 
-local function isPallet(instance)
+function isPallet(instance)
     return instance and instance:IsA("Model") and instance.Name == TARGET_NAME
 end
 
-local function getPalletFromPart(part)
+function getPalletFromPart(part)
     if not part then return nil end
     local current = part
     while current and current ~= Workspace do
@@ -240,7 +278,7 @@ local function getPalletFromPart(part)
     end
 end
 
-local function findTopPart(pallet)
+function findTopPart(pallet)
     local bestPart
     local bestArea = -math.huge
     for _, obj in ipairs(pallet:GetDescendants()) do
@@ -252,7 +290,7 @@ local function findTopPart(pallet)
     return bestPart
 end
 
-local function getBaseParts(pallet)
+function getBaseParts(pallet)
     local parts = {}
     for _, obj in ipairs(pallet:GetDescendants()) do
         if obj:IsA("BasePart") and not obj:GetAttribute("EIK_Carrier") then table.insert(parts, obj) end
@@ -260,7 +298,7 @@ local function getBaseParts(pallet)
     return parts
 end
 
-local function destroyEIK(pallet)
+function destroyEIK(pallet)
     local data = EIK_DATA[pallet]
     if data then
         if data.carrier and data.carrier.Parent then data.carrier:Destroy() end
@@ -270,7 +308,7 @@ local function destroyEIK(pallet)
     if old then old:Destroy() end
 end
 
-local function updateEIK(pallet)
+function updateEIK(pallet)
     local data = EIK_DATA[pallet]
     if not data or not data.carrier or not data.carrier.Parent or not data.weld or not data.weld.Parent then return end
     local topPart = data.topPart
@@ -282,7 +320,7 @@ local function updateEIK(pallet)
     data.stroke.Thickness = EIK_THICKNESS
 end
 
-local function createEIK(pallet)
+function createEIK(pallet)
     if not pallet or not pallet.Parent then return end
     local topPart = findTopPart(pallet)
     if not topPart then return end
@@ -348,19 +386,19 @@ local function createEIK(pallet)
     updateEIK(pallet)
 end
 
-local function refreshAllEIK()
+function refreshAllEIK()
     for pallet in pairs(Pallets) do
         if pallet and pallet.Parent then destroyEIK(pallet) task.defer(createEIK,pallet) end
     end
 end
 
-local function updateAllEIK()
+function updateAllEIK()
     for pallet in pairs(Pallets) do
         if pallet and pallet.Parent then updateEIK(pallet) end
     end
 end
 
-local function tweenPalletColor(pallet,color)
+function tweenPalletColor(pallet,color)
     if not pallet or not pallet.Parent then return end
     local state = PalletState[pallet]
     if not state or state.targetColor == color then return end
@@ -379,18 +417,18 @@ local function tweenPalletColor(pallet,color)
     end)
 end
 
-local function restorePallet(pallet)
+function restorePallet(pallet)
     if not pallet or not pallet.Parent then return end
     local state = PalletState[pallet]
     if state then state.releaseTime=nil state.touching=false end
     tweenPalletColor(pallet,NORMAL_COLOR)
 end
 
-local function restoreAll()
+function restoreAll()
     for pallet in pairs(Pallets) do if pallet and pallet.Parent then restorePallet(pallet) end end
 end
 
-local function registerPallet(pallet)
+function registerPallet(pallet)
     if not isPallet(pallet) or Pallets[pallet] then return end
     Pallets[pallet]=true
     PalletState[pallet]={touching=false,releaseTime=nil,targetColor=nil,tweenId=0}
@@ -398,7 +436,7 @@ local function registerPallet(pallet)
     task.defer(function() if pallet and pallet.Parent then createEIK(pallet) end end)
 end
 
-local function unregisterPallet(pallet)
+function unregisterPallet(pallet)
     if not Pallets[pallet] then return end
     destroyEIK(pallet)
     Pallets[pallet]=nil
@@ -423,11 +461,11 @@ Workspace.DescendantRemoving:Connect(function(obj)
     end
 end)
 
-local overlapParams=OverlapParams.new()
+overlapParams=OverlapParams.new()
 overlapParams.FilterType=Enum.RaycastFilterType.Include
 overlapParams.FilterDescendantsInstances={Workspace}
 
-local function getOverlappingPallets()
+function getOverlappingPallets()
     local result={}
     if not BeamPart or not BeamPart.Parent then BeamPart=getBeamPart() end
     if not BeamPart then return result end
@@ -467,7 +505,7 @@ task.spawn(function()
     end
 end)
 
-local function getAtmosphere()
+function getAtmosphere()
     local atmosphere=Lighting:FindFirstChild("PalletEIK_Atmosphere")
     if atmosphere and atmosphere:IsA("Atmosphere") then return atmosphere end
     atmosphere=Instance.new("Atmosphere")
@@ -476,7 +514,7 @@ local function getAtmosphere()
     return atmosphere
 end
 
-local function restoreLighting()
+function restoreLighting()
     Lighting.ClockTime=OriginalLighting.ClockTime
     Lighting.Brightness=OriginalLighting.Brightness
     Lighting.ExposureCompensation=OriginalLighting.ExposureCompensation
@@ -500,7 +538,7 @@ local function restoreLighting()
     end
 end
 
-local function applyGreySky()
+function applyGreySky()
     local a=getAtmosphere()
     if GreySkyEnabled then
         a.Color=Color3.fromRGB(135,135,135)
@@ -513,7 +551,7 @@ local function applyGreySky()
     end
 end
 
-local function updateSnow()
+function updateSnow()
     if not SnowPart or not SnowPart.Parent then
         SnowPart=Instance.new("Part")
         SnowPart.Name="PalletEIK_Snow"
@@ -546,7 +584,7 @@ end
 
 RunService.RenderStepped:Connect(function() if SnowEnabled then updateSnow() end end)
 
-local State = {
+State = {
     Enabled = true,
     MenuVisible = true,
     Destroyed = false,
@@ -556,21 +594,21 @@ local State = {
     Runtime = {},
 }
 
-local function pushConnection(connection)
+function pushConnection(connection)
     if connection then
         table.insert(State.Connections, connection)
     end
     return connection
 end
 
-local function trackInstance(instance)
+function trackInstance(instance)
     if instance then
         table.insert(State.CreatedInstances, instance)
     end
     return instance
 end
 
-local function disconnectAll()
+function disconnectAll()
     for i = #State.Connections, 1, -1 do
         local connection = State.Connections[i]
         if connection then
@@ -582,7 +620,7 @@ local function disconnectAll()
     end
 end
 
-local function destroyTrackedInstances()
+function destroyTrackedInstances()
     for i = #State.CreatedInstances, 1, -1 do
         local instance = State.CreatedInstances[i]
         if instance and instance.Parent then
@@ -594,7 +632,7 @@ local function destroyTrackedInstances()
     end
 end
 
-local function safeSet(instance, property, value)
+function safeSet(instance, property, value)
     if not instance then
         return false
     end
@@ -604,7 +642,7 @@ local function safeSet(instance, property, value)
     return ok
 end
 
-local function safeGet(instance, property, fallback)
+function safeGet(instance, property, fallback)
     if not instance then
         return fallback
     end
@@ -617,7 +655,7 @@ local function safeGet(instance, property, fallback)
     return fallback
 end
 
-local function clampNumber(value, minimum, maximum, fallback)
+function clampNumber(value, minimum, maximum, fallback)
     value = tonumber(value)
     if not value then
         value = fallback or minimum
@@ -625,14 +663,14 @@ local function clampNumber(value, minimum, maximum, fallback)
     return math.clamp(value, minimum, maximum)
 end
 
-local function copyColor(color)
+function copyColor(color)
     if typeof(color) ~= "Color3" then
         return Color3.new(1, 1, 1)
     end
     return Color3.new(color.R, color.G, color.B)
 end
 
-local function copyColorSequence(sequence)
+function copyColorSequence(sequence)
     if typeof(sequence) ~= "ColorSequence" then
         return ColorSequence.new(Color3.new(1, 1, 1))
     end
@@ -643,7 +681,7 @@ local function copyColorSequence(sequence)
     return ColorSequence.new(points)
 end
 
-local function copyNumberSequence(sequence)
+function copyNumberSequence(sequence)
     if typeof(sequence) ~= "NumberSequence" then
         return NumberSequence.new(0)
     end
@@ -654,22 +692,22 @@ local function copyNumberSequence(sequence)
     return NumberSequence.new(points)
 end
 
-local function vectorMagnitude(vector)
+function vectorMagnitude(vector)
     if typeof(vector) ~= "Vector3" then
         return 0
     end
     return vector.Magnitude
 end
 
-local function getCamera()
+function getCamera()
     return Workspace.CurrentCamera
 end
 
-local function getCharacter()
+function getCharacter()
     return LocalPlayer.Character
 end
 
-local function getHumanoid()
+function getHumanoid()
     local character = getCharacter()
     if not character then
         return nil
@@ -677,7 +715,7 @@ local function getHumanoid()
     return character:FindFirstChildOfClass("Humanoid")
 end
 
-local function getRootPart()
+function getRootPart()
     local character = getCharacter()
     if not character then
         return nil
@@ -685,7 +723,7 @@ local function getRootPart()
     return character:FindFirstChild("HumanoidRootPart")
 end
 
-local function getPalletDistance(pallet)
+function getPalletDistance(pallet)
     local root = getRootPart()
     local target = pallet and pallet.PrimaryPart
     if not root or not target then
@@ -694,19 +732,19 @@ local function getPalletDistance(pallet)
     return vectorMagnitude(root.Position - target.Position)
 end
 
-local function isValidInstance(instance)
+function isValidInstance(instance)
     return instance ~= nil and instance.Parent ~= nil
 end
 
-local function isBasePart(instance)
+function isBasePart(instance)
     return instance ~= nil and instance:IsA("BasePart")
 end
 
-local function isTextLabel(instance)
+function isTextLabel(instance)
     return instance ~= nil and instance:IsA("TextLabel")
 end
 
-local function getOrCreateFolder(parent, name)
+function getOrCreateFolder(parent, name)
     if not parent then
         return nil
     end
@@ -720,7 +758,7 @@ local function getOrCreateFolder(parent, name)
     return folder
 end
 
-local function getOrCreateBoolValue(parent, name, value)
+function getOrCreateBoolValue(parent, name, value)
     local object = parent and parent:FindFirstChild(name)
     if object and object:IsA("BoolValue") then
         object.Value = value
@@ -733,7 +771,7 @@ local function getOrCreateBoolValue(parent, name, value)
     return object
 end
 
-local function getOrCreateNumberValue(parent, name, value)
+function getOrCreateNumberValue(parent, name, value)
     local object = parent and parent:FindFirstChild(name)
     if object and object:IsA("NumberValue") then
         object.Value = value
@@ -746,7 +784,7 @@ local function getOrCreateNumberValue(parent, name, value)
     return object
 end
 
-local function getOrCreateStringValue(parent, name, value)
+function getOrCreateStringValue(parent, name, value)
     local object = parent and parent:FindFirstChild(name)
     if object and object:IsA("StringValue") then
         object.Value = value
@@ -759,7 +797,7 @@ local function getOrCreateStringValue(parent, name, value)
     return object
 end
 
-local function setAttributeSafe(instance, name, value)
+function setAttributeSafe(instance, name, value)
     if not instance then
         return false
     end
@@ -769,7 +807,7 @@ local function setAttributeSafe(instance, name, value)
     return ok
 end
 
-local function getAttributeSafe(instance, name, fallback)
+function getAttributeSafe(instance, name, fallback)
     if not instance then
         return fallback
     end
@@ -782,21 +820,21 @@ local function getAttributeSafe(instance, name, fallback)
     return fallback
 end
 
-local function setEIKLabelText(label, text)
+function setEIKLabelText(label, text)
     if not isTextLabel(label) then
         return
     end
     label.Text = tostring(text or "EIK")
 end
 
-local function setEIKLabelColor(label, color)
+function setEIKLabelColor(label, color)
     if not isTextLabel(label) then
         return
     end
     label.TextColor3 = copyColor(color)
 end
 
-local function setEIKLabelStroke(label, thickness, color)
+function setEIKLabelStroke(label, thickness, color)
     if not isTextLabel(label) then
         return
     end
@@ -811,7 +849,7 @@ local function setEIKLabelStroke(label, thickness, color)
     stroke.Transparency = 0
 end
 
-local function setEIKScale(label, scale)
+function setEIKScale(label, scale)
     if not isTextLabel(label) then
         return
     end
@@ -824,7 +862,7 @@ local function setEIKScale(label, scale)
     uiScale.Scale = clampNumber(scale, 0, 100, 1)
 end
 
-local function setEIKPosition(carrier, x, y, z)
+function setEIKPosition(carrier, x, y, z)
     if not isValidInstance(carrier) or not carrier:IsA("BasePart") then
         return
     end
@@ -837,7 +875,7 @@ local function setEIKPosition(carrier, x, y, z)
     end
 end
 
-local function updateOneEIKData(data)
+function updateOneEIKData(data)
     if not data then
         return
     end
@@ -854,13 +892,13 @@ local function updateOneEIKData(data)
     end
 end
 
-local function updateEveryEIK()
+function updateEveryEIK()
     for _, data in pairs(EIK_DATA) do
         updateOneEIKData(data)
     end
 end
 
-local function getNearestPallet(maxDistance)
+function getNearestPallet(maxDistance)
     local nearest = nil
     local nearestDistance = maxDistance or math.huge
     for pallet in pairs(Pallets) do
@@ -875,14 +913,14 @@ local function getNearestPallet(maxDistance)
     return nearest, nearestDistance
 end
 
-local function clearPalletState(pallet)
+function clearPalletState(pallet)
     if pallet then
         PalletState[pallet] = nil
         EIK_DATA[pallet] = nil
     end
 end
 
-local function rememberPalletState(pallet)
+function rememberPalletState(pallet)
     if not pallet or PalletState[pallet] then
         return
     end
@@ -902,7 +940,7 @@ local function rememberPalletState(pallet)
     PalletState[pallet] = state
 end
 
-local function restoreRememberedPalletState(pallet)
+function restoreRememberedPalletState(pallet)
     local state = PalletState[pallet]
     if not state then
         return
@@ -918,7 +956,7 @@ local function restoreRememberedPalletState(pallet)
     end
 end
 
-local function applyPalletColor(pallet, color)
+function applyPalletColor(pallet, color)
     if not pallet then
         return
     end
@@ -928,7 +966,7 @@ local function applyPalletColor(pallet, color)
     end
 end
 
-local function applyPalletTransparency(pallet, transparency)
+function applyPalletTransparency(pallet, transparency)
     if not pallet then
         return
     end
@@ -937,7 +975,7 @@ local function applyPalletTransparency(pallet, transparency)
     end
 end
 
-local function setAllPalletsColor(color)
+function setAllPalletsColor(color)
     for pallet in pairs(Pallets) do
         if isValidInstance(pallet) then
             applyPalletColor(pallet, color)
@@ -945,7 +983,7 @@ local function setAllPalletsColor(color)
     end
 end
 
-local function setAllPalletsTransparency(transparency)
+function setAllPalletsTransparency(transparency)
     for pallet in pairs(Pallets) do
         if isValidInstance(pallet) then
             applyPalletTransparency(pallet, transparency)
@@ -953,7 +991,7 @@ local function setAllPalletsTransparency(transparency)
     end
 end
 
-local function resetSinglePallet(pallet)
+function resetSinglePallet(pallet)
     if not pallet then
         return
     end
@@ -961,7 +999,7 @@ local function resetSinglePallet(pallet)
     clearPalletState(pallet)
 end
 
-local function resetAllRememberedPallets()
+function resetAllRememberedPallets()
     for pallet in pairs(PalletState) do
         if isValidInstance(pallet) then
             restoreRememberedPalletState(pallet)
@@ -970,7 +1008,7 @@ local function resetAllRememberedPallets()
     table.clear(PalletState)
 end
 
-local function makeBeamTransparency(strength)
+function makeBeamTransparency(strength)
     local value = math.clamp(1 - strength, 0, 1)
     return NumberSequence.new({
         NumberSequenceKeypoint.new(0, 1),
@@ -980,17 +1018,17 @@ local function makeBeamTransparency(strength)
     })
 end
 
-local function makeBeamColor(color)
+function makeBeamColor(color)
     return ColorSequence.new(copyColor(color))
 end
 
-local function setBeamColor(beam, color)
+function setBeamColor(beam, color)
     if beam and beam:IsA("Beam") then
         beam.Color = makeBeamColor(color)
     end
 end
 
-local function setBeamWidth(beam, width)
+function setBeamWidth(beam, width)
     if not beam or not beam:IsA("Beam") then
         return
     end
@@ -999,35 +1037,35 @@ local function setBeamWidth(beam, width)
     beam.Width1 = value
 end
 
-local function setBeamSpeed(beam, speed)
+function setBeamSpeed(beam, speed)
     if beam and beam:IsA("Beam") then
         beam.TextureSpeed = tonumber(speed) or 0
     end
 end
 
-local function setBeamLength(beam, length)
+function setBeamLength(beam, length)
     if beam and beam:IsA("Beam") then
         beam.TextureLength = math.max(0.01, tonumber(length) or 1)
     end
 end
 
-local function setBeamSegments(beam, segments)
+function setBeamSegments(beam, segments)
     if beam and beam:IsA("Beam") then
         beam.Segments = math.clamp(math.floor(tonumber(segments) or 10), 1, 100)
     end
 end
 
-local function setBeamEnabled(beam, enabled)
+function setBeamEnabled(beam, enabled)
     if beam and beam:IsA("Beam") then
         beam.Enabled = enabled == true
     end
 end
 
-local function setCurrentBeamEnabled(enabled)
+function setCurrentBeamEnabled(enabled)
     setBeamEnabled(getGrabBeam(), enabled)
 end
 
-local function refreshAllBeamProperties()
+function refreshAllBeamProperties()
     local beam = getGrabBeam()
     if not beam then
         return
@@ -1038,89 +1076,89 @@ local function refreshAllBeamProperties()
     end
 end
 
-local function getSkyAtmosphere()
+function getSkyAtmosphere()
     return Lighting:FindFirstChildOfClass("Atmosphere")
 end
 
-local function setAtmosphereColor(color)
+function setAtmosphereColor(color)
     local atmosphere = getSkyAtmosphere()
     if atmosphere then
         atmosphere.Color = copyColor(color)
     end
 end
 
-local function setAtmosphereDensity(value)
+function setAtmosphereDensity(value)
     local atmosphere = getSkyAtmosphere()
     if atmosphere then
         atmosphere.Density = clampNumber(value, 0, 1, 0)
     end
 end
 
-local function setAtmosphereHaze(value)
+function setAtmosphereHaze(value)
     local atmosphere = getSkyAtmosphere()
     if atmosphere then
         atmosphere.Haze = clampNumber(value, 0, 10, 0)
     end
 end
 
-local function setAtmosphereGlare(value)
+function setAtmosphereGlare(value)
     local atmosphere = getSkyAtmosphere()
     if atmosphere then
         atmosphere.Glare = clampNumber(value, 0, 10, 0)
     end
 end
 
-local function setLightingClock(value)
+function setLightingClock(value)
     CurrentTime = clampNumber(value, 0, 24, CurrentTime)
     Lighting.ClockTime = CurrentTime
 end
 
-local function setLightingBrightness(value)
+function setLightingBrightness(value)
     CurrentBrightness = clampNumber(value, 0, 5, CurrentBrightness)
     Lighting.Brightness = CurrentBrightness
 end
 
-local function setLightingExposure(value)
+function setLightingExposure(value)
     CurrentExposure = clampNumber(value, -5, 5, CurrentExposure)
     Lighting.ExposureCompensation = CurrentExposure
 end
 
-local function setLightingAmbient(color)
+function setLightingAmbient(color)
     CurrentAmbient = copyColor(color)
     Lighting.Ambient = CurrentAmbient
 end
 
-local function setLightingOutdoorAmbient(color)
+function setLightingOutdoorAmbient(color)
     CurrentOutdoorAmbient = copyColor(color)
     Lighting.OutdoorAmbient = CurrentOutdoorAmbient
 end
 
-local function setGreySkyState(enabled)
+function setGreySkyState(enabled)
     GreySkyEnabled = enabled == true
     applyGreySky()
 end
 
-local function setSnowState(enabled)
+function setSnowState(enabled)
     SnowEnabled = enabled == true
     updateSnow()
 end
 
-local function setSnowRange(value)
+function setSnowRange(value)
     SnowRange = clampNumber(value, 0, 1000, SnowRange)
     updateSnow()
 end
 
-local function setSnowAmount(value)
+function setSnowAmount(value)
     SnowAmount = clampNumber(value, 0, 500, SnowAmount)
     updateSnow()
 end
 
-local function setSnowSpeed(value)
+function setSnowSpeed(value)
     SnowSpeed = clampNumber(value, 1, 30, SnowSpeed)
     updateSnow()
 end
 
-local function removeSnow()
+function removeSnow()
     SnowEnabled = false
     if SnowPart then
         SnowPart:Destroy()
@@ -1129,19 +1167,19 @@ local function removeSnow()
     end
 end
 
-local function resetCamera()
+function resetCamera()
     CurrentFOV = DEFAULT_FOV
     applyFOV()
     saveSettings()
 end
 
-local function setCameraFOV(value)
+function setCameraFOV(value)
     CurrentFOV = clampNumber(value, 50, 120, DEFAULT_FOV)
     applyFOV()
     saveSettings()
 end
 
-local function setEIKText(value)
+function setEIKText(value)
     value = tostring(value or "")
     if value == "" then
         value = "EIK"
@@ -1150,37 +1188,37 @@ local function setEIKText(value)
     updateAllEIK()
 end
 
-local function setEIKTextColor(color)
+function setEIKTextColor(color)
     EIK_TEXT_COLOR = copyColor(color)
     updateAllEIK()
 end
 
-local function setEIKScaleValue(value)
+function setEIKScaleValue(value)
     EIK_SCALE = clampNumber(value, 0, 100, 1)
     updateAllEIK()
 end
 
-local function setEIKThicknessValue(value)
+function setEIKThicknessValue(value)
     EIK_THICKNESS = clampNumber(value, 0, 10, 2)
     updateAllEIK()
 end
 
-local function setEIKX(value)
+function setEIKX(value)
     EIK_X = clampNumber(value, -5, 5, 0)
     updateAllEIK()
 end
 
-local function setEIKY(value)
+function setEIKY(value)
     EIK_Y = clampNumber(value, -2, 2, 0)
     updateAllEIK()
 end
 
-local function setEIKZ(value)
+function setEIKZ(value)
     EIK_Z = clampNumber(value, -5, 5, 0)
     updateAllEIK()
 end
 
-local function resetEIKValues()
+function resetEIKValues()
     EIK_SCALE = 1
     EIK_THICKNESS = 2
     EIK_X = 0
@@ -1191,21 +1229,21 @@ local function resetEIKValues()
     updateAllEIK()
 end
 
-local function getEIKData(pallet)
+function getEIKData(pallet)
     return pallet and EIK_DATA[pallet] or nil
 end
 
-local function getEIKTextLabel(pallet)
+function getEIKTextLabel(pallet)
     local data = getEIKData(pallet)
     return data and data.text or nil
 end
 
-local function getEIKCarrier(pallet)
+function getEIKCarrier(pallet)
     local data = getEIKData(pallet)
     return data and data.carrier or nil
 end
 
-local function updatePalletEIK(pallet)
+function updatePalletEIK(pallet)
     if not pallet or not pallet.Parent then
         return
     end
@@ -1215,7 +1253,7 @@ local function updatePalletEIK(pallet)
     end
 end
 
-local function updateVisiblePalletEIK()
+function updateVisiblePalletEIK()
     for pallet in pairs(Pallets) do
         if pallet and pallet.Parent then
             updatePalletEIK(pallet)
@@ -1223,7 +1261,7 @@ local function updateVisiblePalletEIK()
     end
 end
 
-local function getPalletCount()
+function getPalletCount()
     local count = 0
     for pallet in pairs(Pallets) do
         if pallet and pallet.Parent then
@@ -1233,7 +1271,7 @@ local function getPalletCount()
     return count
 end
 
-local function getProcessedPalletCount()
+function getProcessedPalletCount()
     local count = 0
     for pallet in pairs(Pallets) do
         if pallet and pallet.Parent and PalletState[pallet] then
@@ -1243,7 +1281,7 @@ local function getProcessedPalletCount()
     return count
 end
 
-local function getActiveEIKCount()
+function getActiveEIKCount()
     local count = 0
     for pallet, data in pairs(EIK_DATA) do
         if pallet and pallet.Parent and data then
@@ -1253,7 +1291,7 @@ local function getActiveEIKCount()
     return count
 end
 
-local function cleanupDeadPallets()
+function cleanupDeadPallets()
     for pallet in pairs(Pallets) do
         if not pallet or not pallet.Parent then
             Pallets[pallet] = nil
@@ -1263,7 +1301,7 @@ local function cleanupDeadPallets()
     end
 end
 
-local function restoreEverything()
+function restoreEverything()
     DETECTION_ENABLED = true
     restoreAll()
     resetAllRememberedPallets()
@@ -1275,7 +1313,7 @@ local function restoreEverything()
     State.Enabled = true
 end
 
-local function disableEverything()
+function disableEverything()
     DETECTION_ENABLED = false
     State.Enabled = false
     SnowEnabled = false
@@ -1287,7 +1325,7 @@ local function disableEverything()
     setCurrentBeamEnabled(false)
 end
 
-local function registerPallet(pallet)
+function registerPallet(pallet)
     if not pallet or not pallet:IsA("Model") or pallet.Name ~= TARGET_NAME then
         return false
     end
@@ -1298,7 +1336,7 @@ local function registerPallet(pallet)
     return true
 end
 
-local function unregisterPallet(pallet)
+function unregisterPallet(pallet)
     if not pallet then
         return
     end
@@ -1307,7 +1345,7 @@ local function unregisterPallet(pallet)
     Pallets[pallet] = nil
 end
 
-local function registerExistingPallets()
+function registerExistingPallets()
     for _, object in ipairs(Workspace:GetDescendants()) do
         if isPallet(object) then
             if not Pallets[object] then
@@ -1317,7 +1355,7 @@ local function registerExistingPallets()
     end
 end
 
-local function getPalletPartsCount(pallet)
+function getPalletPartsCount(pallet)
     local count = 0
     if not pallet then
         return count
@@ -1330,7 +1368,7 @@ local function getPalletPartsCount(pallet)
     return count
 end
 
-local function getPalletBounds(pallet)
+function getPalletBounds(pallet)
     if not pallet then
         return nil, nil
     end
@@ -1343,16 +1381,16 @@ local function getPalletBounds(pallet)
     return cf, size
 end
 
-local function getPalletTopHeight(pallet)
+function getPalletTopHeight(pallet)
     local _, size = getPalletBounds(pallet)
     return size and size.Y or 0
 end
 
-local function isPalletNearPlayer(pallet, distance)
+function isPalletNearPlayer(pallet, distance)
     return getPalletDistance(pallet) <= (distance or 20)
 end
 
-local function playerTouchesPallet(pallet)
+function playerTouchesPallet(pallet)
     if not pallet or not pallet.Parent then
         return false
     end
@@ -1375,7 +1413,7 @@ local function playerTouchesPallet(pallet)
     return #parts > 0
 end
 
-local function touchCheckAllPallets()
+function touchCheckAllPallets()
     if not DETECTION_ENABLED then
         return
     end
@@ -1392,28 +1430,28 @@ local function touchCheckAllPallets()
     end
 end
 
-local function maintainRuntime()
+function maintainRuntime()
     cleanupDeadPallets()
     updateVisiblePalletEIK()
     refreshGrabLine()
 end
 
-local function setMenuVisible(visible)
+function setMenuVisible(visible)
     State.MenuVisible = visible == true
     pcall(function()
         Window:SetVisible(State.MenuVisible)
     end)
 end
 
-local function toggleMenuVisible()
+function toggleMenuVisible()
     setMenuVisible(not State.MenuVisible)
 end
 
-local function makeColor(r, g, b)
+function makeColor(r, g, b)
     return Color3.fromRGB(math.clamp(math.floor(r or 0), 0, 255), math.clamp(math.floor(g or 0), 0, 255), math.clamp(math.floor(b or 0), 0, 255))
 end
 
-local function colorToTable(color)
+function colorToTable(color)
     color = copyColor(color)
     return {
         R = color.R,
@@ -1422,7 +1460,7 @@ local function colorToTable(color)
     }
 end
 
-local function tableToColor(value, fallback)
+function tableToColor(value, fallback)
     if type(value) ~= "table" then
         return copyColor(fallback or Color3.new(1, 1, 1))
     end
@@ -1433,7 +1471,7 @@ local function tableToColor(value, fallback)
     )
 end
 
-local function saveRuntimeSnapshot()
+function saveRuntimeSnapshot()
     State.Defaults.FOV = CurrentFOV
     State.Defaults.ClockTime = CurrentTime
     State.Defaults.Brightness = CurrentBrightness
@@ -1446,7 +1484,7 @@ local function saveRuntimeSnapshot()
     State.Defaults.EIKColor = copyColor(EIK_TEXT_COLOR)
 end
 
-local function restoreRuntimeSnapshot()
+function restoreRuntimeSnapshot()
     local defaults = State.Defaults
     if defaults.FOV then
         CurrentFOV = defaults.FOV
@@ -1484,7 +1522,7 @@ end
 
 saveRuntimeSnapshot()
 
-local function EIKUtility_1(value)
+function EIKUtility_1(value)
     if value == nil then
         return 1
     end
@@ -1494,7 +1532,7 @@ local function EIKUtility_1(value)
     return value
 end
 
-local function EIKUtility_2(value)
+function EIKUtility_2(value)
     if value == nil then
         return 2
     end
@@ -1504,7 +1542,7 @@ local function EIKUtility_2(value)
     return value
 end
 
-local function EIKUtility_3(value)
+function EIKUtility_3(value)
     if value == nil then
         return 3
     end
@@ -1514,7 +1552,7 @@ local function EIKUtility_3(value)
     return value
 end
 
-local function EIKUtility_4(value)
+function EIKUtility_4(value)
     if value == nil then
         return 4
     end
@@ -1524,7 +1562,7 @@ local function EIKUtility_4(value)
     return value
 end
 
-local function EIKUtility_5(value)
+function EIKUtility_5(value)
     if value == nil then
         return 5
     end
@@ -1534,7 +1572,7 @@ local function EIKUtility_5(value)
     return value
 end
 
-local function EIKUtility_6(value)
+function EIKUtility_6(value)
     if value == nil then
         return 6
     end
@@ -1544,7 +1582,7 @@ local function EIKUtility_6(value)
     return value
 end
 
-local function EIKUtility_7(value)
+function EIKUtility_7(value)
     if value == nil then
         return 7
     end
@@ -1554,7 +1592,7 @@ local function EIKUtility_7(value)
     return value
 end
 
-local function EIKUtility_8(value)
+function EIKUtility_8(value)
     if value == nil then
         return 8
     end
@@ -1564,7 +1602,7 @@ local function EIKUtility_8(value)
     return value
 end
 
-local function EIKUtility_9(value)
+function EIKUtility_9(value)
     if value == nil then
         return 9
     end
@@ -1574,7 +1612,7 @@ local function EIKUtility_9(value)
     return value
 end
 
-local function EIKUtility_10(value)
+function EIKUtility_10(value)
     if value == nil then
         return 10
     end
@@ -1584,7 +1622,7 @@ local function EIKUtility_10(value)
     return value
 end
 
-local function EIKUtility_11(value)
+function EIKUtility_11(value)
     if value == nil then
         return 11
     end
@@ -1594,7 +1632,7 @@ local function EIKUtility_11(value)
     return value
 end
 
-local function EIKUtility_12(value)
+function EIKUtility_12(value)
     if value == nil then
         return 12
     end
@@ -1604,7 +1642,7 @@ local function EIKUtility_12(value)
     return value
 end
 
-local function EIKUtility_13(value)
+function EIKUtility_13(value)
     if value == nil then
         return 13
     end
@@ -1614,7 +1652,7 @@ local function EIKUtility_13(value)
     return value
 end
 
-local function EIKUtility_14(value)
+function EIKUtility_14(value)
     if value == nil then
         return 14
     end
@@ -1624,7 +1662,7 @@ local function EIKUtility_14(value)
     return value
 end
 
-local function EIKUtility_15(value)
+function EIKUtility_15(value)
     if value == nil then
         return 15
     end
@@ -1634,7 +1672,7 @@ local function EIKUtility_15(value)
     return value
 end
 
-local function EIKUtility_16(value)
+function EIKUtility_16(value)
     if value == nil then
         return 16
     end
@@ -1644,7 +1682,7 @@ local function EIKUtility_16(value)
     return value
 end
 
-local function EIKUtility_17(value)
+function EIKUtility_17(value)
     if value == nil then
         return 17
     end
@@ -1654,7 +1692,7 @@ local function EIKUtility_17(value)
     return value
 end
 
-local function EIKUtility_18(value)
+function EIKUtility_18(value)
     if value == nil then
         return 18
     end
@@ -1664,7 +1702,7 @@ local function EIKUtility_18(value)
     return value
 end
 
-local function EIKUtility_19(value)
+function EIKUtility_19(value)
     if value == nil then
         return 19
     end
@@ -1674,7 +1712,7 @@ local function EIKUtility_19(value)
     return value
 end
 
-local function EIKUtility_20(value)
+function EIKUtility_20(value)
     if value == nil then
         return 20
     end
@@ -1684,7 +1722,7 @@ local function EIKUtility_20(value)
     return value
 end
 
-local function EIKUtility_21(value)
+function EIKUtility_21(value)
     if value == nil then
         return 21
     end
@@ -1694,7 +1732,7 @@ local function EIKUtility_21(value)
     return value
 end
 
-local function EIKUtility_22(value)
+function EIKUtility_22(value)
     if value == nil then
         return 22
     end
@@ -1704,7 +1742,7 @@ local function EIKUtility_22(value)
     return value
 end
 
-local function EIKUtility_23(value)
+function EIKUtility_23(value)
     if value == nil then
         return 23
     end
@@ -1714,7 +1752,7 @@ local function EIKUtility_23(value)
     return value
 end
 
-local function EIKUtility_24(value)
+function EIKUtility_24(value)
     if value == nil then
         return 24
     end
@@ -1724,7 +1762,7 @@ local function EIKUtility_24(value)
     return value
 end
 
-local function EIKUtility_25(value)
+function EIKUtility_25(value)
     if value == nil then
         return 25
     end
@@ -1734,7 +1772,7 @@ local function EIKUtility_25(value)
     return value
 end
 
-local function EIKUtility_26(value)
+function EIKUtility_26(value)
     if value == nil then
         return 26
     end
@@ -1744,7 +1782,7 @@ local function EIKUtility_26(value)
     return value
 end
 
-local function EIKUtility_27(value)
+function EIKUtility_27(value)
     if value == nil then
         return 27
     end
@@ -1754,7 +1792,7 @@ local function EIKUtility_27(value)
     return value
 end
 
-local function EIKUtility_28(value)
+function EIKUtility_28(value)
     if value == nil then
         return 28
     end
@@ -1764,7 +1802,7 @@ local function EIKUtility_28(value)
     return value
 end
 
-local function EIKUtility_29(value)
+function EIKUtility_29(value)
     if value == nil then
         return 29
     end
@@ -1774,7 +1812,7 @@ local function EIKUtility_29(value)
     return value
 end
 
-local function EIKUtility_30(value)
+function EIKUtility_30(value)
     if value == nil then
         return 30
     end
@@ -1784,7 +1822,7 @@ local function EIKUtility_30(value)
     return value
 end
 
-local function EIKUtility_31(value)
+function EIKUtility_31(value)
     if value == nil then
         return 31
     end
@@ -1794,7 +1832,7 @@ local function EIKUtility_31(value)
     return value
 end
 
-local function EIKUtility_32(value)
+function EIKUtility_32(value)
     if value == nil then
         return 32
     end
@@ -1804,7 +1842,7 @@ local function EIKUtility_32(value)
     return value
 end
 
-local function EIKUtility_33(value)
+function EIKUtility_33(value)
     if value == nil then
         return 33
     end
@@ -1814,7 +1852,7 @@ local function EIKUtility_33(value)
     return value
 end
 
-local function EIKUtility_34(value)
+function EIKUtility_34(value)
     if value == nil then
         return 34
     end
@@ -1824,7 +1862,7 @@ local function EIKUtility_34(value)
     return value
 end
 
-local function EIKUtility_35(value)
+function EIKUtility_35(value)
     if value == nil then
         return 35
     end
@@ -1834,7 +1872,7 @@ local function EIKUtility_35(value)
     return value
 end
 
-local function EIKUtility_36(value)
+function EIKUtility_36(value)
     if value == nil then
         return 36
     end
@@ -1844,7 +1882,7 @@ local function EIKUtility_36(value)
     return value
 end
 
-local function EIKUtility_37(value)
+function EIKUtility_37(value)
     if value == nil then
         return 37
     end
@@ -1854,7 +1892,7 @@ local function EIKUtility_37(value)
     return value
 end
 
-local function EIKUtility_38(value)
+function EIKUtility_38(value)
     if value == nil then
         return 38
     end
@@ -1864,7 +1902,7 @@ local function EIKUtility_38(value)
     return value
 end
 
-local function EIKUtility_39(value)
+function EIKUtility_39(value)
     if value == nil then
         return 39
     end
@@ -1874,7 +1912,7 @@ local function EIKUtility_39(value)
     return value
 end
 
-local function EIKUtility_40(value)
+function EIKUtility_40(value)
     if value == nil then
         return 40
     end
@@ -1884,7 +1922,7 @@ local function EIKUtility_40(value)
     return value
 end
 
-local function EIKUtility_41(value)
+function EIKUtility_41(value)
     if value == nil then
         return 41
     end
@@ -1894,7 +1932,7 @@ local function EIKUtility_41(value)
     return value
 end
 
-local function EIKUtility_42(value)
+function EIKUtility_42(value)
     if value == nil then
         return 42
     end
@@ -1904,7 +1942,7 @@ local function EIKUtility_42(value)
     return value
 end
 
-local function EIKUtility_43(value)
+function EIKUtility_43(value)
     if value == nil then
         return 43
     end
@@ -1914,7 +1952,7 @@ local function EIKUtility_43(value)
     return value
 end
 
-local function EIKUtility_44(value)
+function EIKUtility_44(value)
     if value == nil then
         return 44
     end
@@ -1924,7 +1962,7 @@ local function EIKUtility_44(value)
     return value
 end
 
-local function EIKUtility_45(value)
+function EIKUtility_45(value)
     if value == nil then
         return 45
     end
@@ -1934,7 +1972,7 @@ local function EIKUtility_45(value)
     return value
 end
 
-local function EIKUtility_46(value)
+function EIKUtility_46(value)
     if value == nil then
         return 46
     end
@@ -1944,7 +1982,7 @@ local function EIKUtility_46(value)
     return value
 end
 
-local function EIKUtility_47(value)
+function EIKUtility_47(value)
     if value == nil then
         return 47
     end
@@ -1954,7 +1992,7 @@ local function EIKUtility_47(value)
     return value
 end
 
-local function EIKUtility_48(value)
+function EIKUtility_48(value)
     if value == nil then
         return 48
     end
@@ -1964,7 +2002,7 @@ local function EIKUtility_48(value)
     return value
 end
 
-local function EIKUtility_49(value)
+function EIKUtility_49(value)
     if value == nil then
         return 49
     end
@@ -1974,7 +2012,7 @@ local function EIKUtility_49(value)
     return value
 end
 
-local function EIKUtility_50(value)
+function EIKUtility_50(value)
     if value == nil then
         return 50
     end
@@ -1984,7 +2022,7 @@ local function EIKUtility_50(value)
     return value
 end
 
-local function EIKUtility_51(value)
+function EIKUtility_51(value)
     if value == nil then
         return 51
     end
@@ -1994,7 +2032,7 @@ local function EIKUtility_51(value)
     return value
 end
 
-local function EIKUtility_52(value)
+function EIKUtility_52(value)
     if value == nil then
         return 52
     end
@@ -2004,7 +2042,7 @@ local function EIKUtility_52(value)
     return value
 end
 
-local function EIKUtility_53(value)
+function EIKUtility_53(value)
     if value == nil then
         return 53
     end
@@ -2014,7 +2052,7 @@ local function EIKUtility_53(value)
     return value
 end
 
-local function EIKUtility_54(value)
+function EIKUtility_54(value)
     if value == nil then
         return 54
     end
@@ -2024,7 +2062,7 @@ local function EIKUtility_54(value)
     return value
 end
 
-local function EIKUtility_55(value)
+function EIKUtility_55(value)
     if value == nil then
         return 55
     end
@@ -2034,7 +2072,7 @@ local function EIKUtility_55(value)
     return value
 end
 
-local function EIKUtility_56(value)
+function EIKUtility_56(value)
     if value == nil then
         return 56
     end
@@ -2044,7 +2082,7 @@ local function EIKUtility_56(value)
     return value
 end
 
-local function EIKUtility_57(value)
+function EIKUtility_57(value)
     if value == nil then
         return 57
     end
@@ -2054,7 +2092,7 @@ local function EIKUtility_57(value)
     return value
 end
 
-local function EIKUtility_58(value)
+function EIKUtility_58(value)
     if value == nil then
         return 58
     end
@@ -2064,7 +2102,7 @@ local function EIKUtility_58(value)
     return value
 end
 
-local function EIKUtility_59(value)
+function EIKUtility_59(value)
     if value == nil then
         return 59
     end
@@ -2074,7 +2112,7 @@ local function EIKUtility_59(value)
     return value
 end
 
-local function EIKUtility_60(value)
+function EIKUtility_60(value)
     if value == nil then
         return 60
     end
@@ -2084,7 +2122,7 @@ local function EIKUtility_60(value)
     return value
 end
 
-local function EIKUtility_61(value)
+function EIKUtility_61(value)
     if value == nil then
         return 61
     end
@@ -2094,7 +2132,7 @@ local function EIKUtility_61(value)
     return value
 end
 
-local function EIKUtility_62(value)
+function EIKUtility_62(value)
     if value == nil then
         return 62
     end
@@ -2104,7 +2142,7 @@ local function EIKUtility_62(value)
     return value
 end
 
-local function EIKUtility_63(value)
+function EIKUtility_63(value)
     if value == nil then
         return 63
     end
@@ -2114,7 +2152,7 @@ local function EIKUtility_63(value)
     return value
 end
 
-local function EIKUtility_64(value)
+function EIKUtility_64(value)
     if value == nil then
         return 64
     end
@@ -2124,7 +2162,7 @@ local function EIKUtility_64(value)
     return value
 end
 
-local function EIKUtility_65(value)
+function EIKUtility_65(value)
     if value == nil then
         return 65
     end
@@ -2134,7 +2172,7 @@ local function EIKUtility_65(value)
     return value
 end
 
-local function EIKUtility_66(value)
+function EIKUtility_66(value)
     if value == nil then
         return 66
     end
@@ -2144,7 +2182,7 @@ local function EIKUtility_66(value)
     return value
 end
 
-local function EIKUtility_67(value)
+function EIKUtility_67(value)
     if value == nil then
         return 67
     end
@@ -2154,7 +2192,7 @@ local function EIKUtility_67(value)
     return value
 end
 
-local function EIKUtility_68(value)
+function EIKUtility_68(value)
     if value == nil then
         return 68
     end
@@ -2164,7 +2202,7 @@ local function EIKUtility_68(value)
     return value
 end
 
-local function EIKUtility_69(value)
+function EIKUtility_69(value)
     if value == nil then
         return 69
     end
@@ -2174,7 +2212,7 @@ local function EIKUtility_69(value)
     return value
 end
 
-local function EIKUtility_70(value)
+function EIKUtility_70(value)
     if value == nil then
         return 70
     end
@@ -2184,7 +2222,7 @@ local function EIKUtility_70(value)
     return value
 end
 
-local function EIKUtility_71(value)
+function EIKUtility_71(value)
     if value == nil then
         return 71
     end
@@ -2194,7 +2232,7 @@ local function EIKUtility_71(value)
     return value
 end
 
-local function EIKUtility_72(value)
+function EIKUtility_72(value)
     if value == nil then
         return 72
     end
@@ -2204,7 +2242,7 @@ local function EIKUtility_72(value)
     return value
 end
 
-local function EIKUtility_73(value)
+function EIKUtility_73(value)
     if value == nil then
         return 73
     end
@@ -2214,7 +2252,7 @@ local function EIKUtility_73(value)
     return value
 end
 
-local function EIKUtility_74(value)
+function EIKUtility_74(value)
     if value == nil then
         return 74
     end
@@ -2224,7 +2262,7 @@ local function EIKUtility_74(value)
     return value
 end
 
-local function EIKUtility_75(value)
+function EIKUtility_75(value)
     if value == nil then
         return 75
     end
@@ -2234,7 +2272,7 @@ local function EIKUtility_75(value)
     return value
 end
 
-local function EIKUtility_76(value)
+function EIKUtility_76(value)
     if value == nil then
         return 76
     end
@@ -2244,7 +2282,7 @@ local function EIKUtility_76(value)
     return value
 end
 
-local function EIKUtility_77(value)
+function EIKUtility_77(value)
     if value == nil then
         return 77
     end
@@ -2254,7 +2292,7 @@ local function EIKUtility_77(value)
     return value
 end
 
-local function EIKUtility_78(value)
+function EIKUtility_78(value)
     if value == nil then
         return 78
     end
@@ -2264,7 +2302,7 @@ local function EIKUtility_78(value)
     return value
 end
 
-local function EIKUtility_79(value)
+function EIKUtility_79(value)
     if value == nil then
         return 79
     end
@@ -2274,7 +2312,7 @@ local function EIKUtility_79(value)
     return value
 end
 
-local function EIKUtility_80(value)
+function EIKUtility_80(value)
     if value == nil then
         return 80
     end
@@ -2284,7 +2322,7 @@ local function EIKUtility_80(value)
     return value
 end
 
-local function EIKUtility_81(value)
+function EIKUtility_81(value)
     if value == nil then
         return 81
     end
@@ -2294,7 +2332,7 @@ local function EIKUtility_81(value)
     return value
 end
 
-local function EIKUtility_82(value)
+function EIKUtility_82(value)
     if value == nil then
         return 82
     end
@@ -2304,7 +2342,7 @@ local function EIKUtility_82(value)
     return value
 end
 
-local function EIKUtility_83(value)
+function EIKUtility_83(value)
     if value == nil then
         return 83
     end
@@ -2314,7 +2352,7 @@ local function EIKUtility_83(value)
     return value
 end
 
-local function EIKUtility_84(value)
+function EIKUtility_84(value)
     if value == nil then
         return 84
     end
@@ -2324,7 +2362,7 @@ local function EIKUtility_84(value)
     return value
 end
 
-local function EIKUtility_85(value)
+function EIKUtility_85(value)
     if value == nil then
         return 85
     end
@@ -2334,7 +2372,7 @@ local function EIKUtility_85(value)
     return value
 end
 
-local function EIKUtility_86(value)
+function EIKUtility_86(value)
     if value == nil then
         return 86
     end
@@ -2344,7 +2382,7 @@ local function EIKUtility_86(value)
     return value
 end
 
-local function EIKUtility_87(value)
+function EIKUtility_87(value)
     if value == nil then
         return 87
     end
@@ -2354,7 +2392,7 @@ local function EIKUtility_87(value)
     return value
 end
 
-local function EIKUtility_88(value)
+function EIKUtility_88(value)
     if value == nil then
         return 88
     end
@@ -2364,7 +2402,7 @@ local function EIKUtility_88(value)
     return value
 end
 
-local function EIKUtility_89(value)
+function EIKUtility_89(value)
     if value == nil then
         return 89
     end
@@ -2374,7 +2412,7 @@ local function EIKUtility_89(value)
     return value
 end
 
-local function EIKUtility_90(value)
+function EIKUtility_90(value)
     if value == nil then
         return 90
     end
@@ -2384,7 +2422,7 @@ local function EIKUtility_90(value)
     return value
 end
 
-local function EIKUtility_91(value)
+function EIKUtility_91(value)
     if value == nil then
         return 91
     end
@@ -2394,7 +2432,7 @@ local function EIKUtility_91(value)
     return value
 end
 
-local function EIKUtility_92(value)
+function EIKUtility_92(value)
     if value == nil then
         return 92
     end
@@ -2404,7 +2442,7 @@ local function EIKUtility_92(value)
     return value
 end
 
-local function EIKUtility_93(value)
+function EIKUtility_93(value)
     if value == nil then
         return 93
     end
@@ -2414,7 +2452,7 @@ local function EIKUtility_93(value)
     return value
 end
 
-local function EIKUtility_94(value)
+function EIKUtility_94(value)
     if value == nil then
         return 94
     end
@@ -2424,7 +2462,7 @@ local function EIKUtility_94(value)
     return value
 end
 
-local function EIKUtility_95(value)
+function EIKUtility_95(value)
     if value == nil then
         return 95
     end
@@ -2434,7 +2472,7 @@ local function EIKUtility_95(value)
     return value
 end
 
-local function EIKUtility_96(value)
+function EIKUtility_96(value)
     if value == nil then
         return 96
     end
@@ -2444,7 +2482,7 @@ local function EIKUtility_96(value)
     return value
 end
 
-local function EIKUtility_97(value)
+function EIKUtility_97(value)
     if value == nil then
         return 97
     end
@@ -2454,7 +2492,7 @@ local function EIKUtility_97(value)
     return value
 end
 
-local function EIKUtility_98(value)
+function EIKUtility_98(value)
     if value == nil then
         return 98
     end
@@ -2464,7 +2502,7 @@ local function EIKUtility_98(value)
     return value
 end
 
-local function EIKUtility_99(value)
+function EIKUtility_99(value)
     if value == nil then
         return 99
     end
@@ -2474,7 +2512,7 @@ local function EIKUtility_99(value)
     return value
 end
 
-local function EIKUtility_100(value)
+function EIKUtility_100(value)
     if value == nil then
         return 100
     end
@@ -2497,7 +2535,7 @@ end)
 BeamSection:AddToggle("BeamDetection",{Text="Beam Detection",Default=true,Callback=function(v) DETECTION_ENABLED=v if not v then restoreAll() end end})
 BeamSection:AddSlider("CheckInterval",{Text="Check Interval",Default=CHECK_INTERVAL,Min=.03,Max=.3,Rounding=2,Suffix="s",Callback=function(v) CHECK_INTERVAL=v end})
 
-local palletColorLabel=PalletColorSection:AddLabel("Grabbed Color")
+palletColorLabel=PalletColorSection:AddLabel("Grabbed Color")
 palletColorLabel:AddColorPicker("PalletChangeColor",{Default=PALLET_CHANGE_COLOR,Title="Grabbed Color",Callback=function(v) PALLET_CHANGE_COLOR=v end})
 PalletColorSection:AddButton({Text="Restore Pallet Colors",Func=restoreAll})
 
@@ -2508,7 +2546,7 @@ EIKSection:AddInput("EIKText",{Text="Custom Pallet Text",Default="EIK",Placehold
 EIKSection:AddSlider("EIKScale",{Text="Scale",Default=EIK_SCALE,Min=0,Max=100,Rounding=2,Callback=function(v) EIK_SCALE=v updateAllEIK() end})
 EIKSection:AddSlider("EIKThickness",{Text="Thickness",Default=EIK_THICKNESS,Min=0,Max=10,Rounding=2,Callback=function(v) EIK_THICKNESS=v updateAllEIK() end})
 
-local eikColorLabel=EIKSection:AddLabel("Text Color")
+eikColorLabel=EIKSection:AddLabel("Text Color")
 eikColorLabel:AddColorPicker("EIKTextColor",{Default=EIK_TEXT_COLOR,Title="Text Color",Callback=function(v) EIK_TEXT_COLOR=v for _,data in pairs(EIK_DATA) do if data.text then data.text.TextColor3=v end if data.stroke then data.stroke.Color=v end end end})
 
 EIKSection:AddSlider("EIKPositionX",{Text="Position X",Default=EIK_X,Min=-5,Max=5,Rounding=2,Callback=function(v) EIK_X=v updateAllEIK() end})
@@ -2543,11 +2581,11 @@ TimeSection:AddButton({Text="Night Time",Func=function()
 end})
 TimeSection:AddButton({Text="Restore Lighting",Func=restoreLighting})
 
-local skyLabel=LightingSection:AddLabel("Sky Color")
+skyLabel=LightingSection:AddLabel("Sky Color")
 skyLabel:AddColorPicker("SkyColor",{Default=Color3.fromRGB(199,199,199),Title="Sky Color",Callback=function(v) getAtmosphere().Color=v end})
-local ambientLabel=LightingSection:AddLabel("Ambient")
+ambientLabel=LightingSection:AddLabel("Ambient")
 ambientLabel:AddColorPicker("Ambient",{Default=CurrentAmbient,Title="Ambient",Callback=function(v) CurrentAmbient=v Lighting.Ambient=v end})
-local outdoorLabel=LightingSection:AddLabel("Outdoor Ambient")
+outdoorLabel=LightingSection:AddLabel("Outdoor Ambient")
 outdoorLabel:AddColorPicker("OutdoorAmbient",{Default=CurrentOutdoorAmbient,Title="Outdoor Ambient",Callback=function(v) CurrentOutdoorAmbient=v Lighting.OutdoorAmbient=v end})
 LightingSection:AddSlider("Brightness",{Text="Brightness",Default=CurrentBrightness,Min=0,Max=5,Rounding=2,Callback=function(v) CurrentBrightness=v Lighting.Brightness=v end})
 LightingSection:AddSlider("Exposure",{Text="Exposure",Default=CurrentExposure,Min=-3,Max=3,Rounding=2,Callback=function(v) CurrentExposure=v Lighting.ExposureCompensation=v end})
