@@ -6,9 +6,12 @@ Lighting = game:GetService("Lighting")
 HttpService = game:GetService("HttpService")
 
 LocalPlayer = Players.LocalPlayer
+if not LocalPlayer then
+    error("i forgot")
+end
 ObsidianUrl = "https://raw.githubusercontent.com/deividcomsono/Obsidian/main/Library.lua"
 if type(loadstring) ~= "function" then
-    error("hi")
+    error("wrong environment, probably not use on executor only")
 end
 Library = nil
 do
@@ -16,15 +19,15 @@ do
         return loadstring(game:HttpGet(ObsidianUrl))()
     end)
     if not ok then
-        error("Pallet EIK: Obsidian failed to load: " .. tostring(result))
+        error("obs failed to load" .. tostring(result))
     end
     Library = result
 end
 if type(Library) ~= "table" then
-    error("Pallet EIK: Obsidian returned an invalid Library object.")
+    error("invalid lib object")
 end
 if type(Library.CreateWindow) ~= "function" then
-    error("Pallet EIK: this is not the official Obsidian Library.lua. CreateWindow is missing.")
+    error("is this the wrong obsidian library, probably not ignore this")
 end
 
 Options = Library.Options
@@ -33,15 +36,15 @@ Toggles = Library.Toggles
 function requireMethod(object, name, label)
     local method = object and object[name]
     if type(method) ~= "function" then
-        error("Pallet EIK: Obsidian API mismatch. Missing " .. label .. ": " .. name)
+        error("did i use the wrong api " .. label .. ": " .. name)
     end
     return method
 end
 
 okWindow, Window = pcall(function()
     return Library:CreateWindow({
-        Title = "i l-l-loveee huracan",
-        Footer = "h-h-hhothuracan",
+        Title = "I love huracan",
+        Footer = "h-h-hothuracan",
         Center = true,
         AutoShow = true,
         Resizable = true,
@@ -49,10 +52,10 @@ okWindow, Window = pcall(function()
     })
 end)
 if not okWindow then
-    error("Pallet EIK: CreateWindow failed: " .. tostring(Window))
+    error("CreateWindow failed " .. tostring(Window))
 end
 if not Window then
-    error("Pallet EIK: CreateWindow returned nil.")
+    error("CreateWindow returning nil")
 end
 
 function addTab(name, icon)
@@ -61,7 +64,7 @@ function addTab(name, icon)
         return Window:AddTab(name, icon)
     end)
     if not ok or not tab then
-        error("Pallet EIK: failed to create tab " .. name .. ": " .. tostring(tab))
+        error("creating a tab failed or something " .. name .. ": " .. tostring(tab))
     end
     return tab
 end
@@ -81,33 +84,34 @@ function addGroup(tab, side, name)
         return tab:AddGroupbox({Side = side, Name = name})
     end)
     if not ok or not group then
-        error("Pallet EIK: failed to create groupbox " .. name .. ": " .. tostring(group))
+        error("groupbox failed to create " .. name .. ": " .. tostring(group))
     end
     return group
 end
 
 MainTab = addTab("Main", "home")
-SettingsTab = addTab("Settings", "settings")
+SettingsTab = addTab("Misc", "settings")
 TimeTab = addTab("Time", "sun")
 VisualsTab = addTab("Visuals", "eye")
 KeybindsTab = addTab("Keybinds", "keyboard")
+MenuSettingsTab = addTab("Menu Settings", "settings")
 
-BeamSection = addGroup(MainTab, "Left", "Beam Detection")
-UtilitySection = addGroup(MainTab, "Right", "Utility")
+BeamSection = addGroup(MainTab, "Left", "Detection")
 PalletColorSection = addGroup(MainTab, "Left", "Pallet Color")
-EIKSection = addGroup(MainTab, "Right", "Pallet Text")
+MaterialSection = addGroup(MainTab, "Right", "Pallet Material")
+PalletTextSection = addGroup(MainTab, "Right", "Pallet Text")
+UtilitySection = addGroup(MainTab, "Right", "Restore")
 
 CameraSection = addGroup(SettingsTab, "Left", "Camera")
 GrabLineSection = addGroup(SettingsTab, "Right", "Grab Line")
-GrabLineUtilitySection = addGroup(SettingsTab, "Left", "Grab Line Utility")
 
 TimeSection = addGroup(TimeTab, "Left", "Time")
-LightingSection = addGroup(TimeTab, "Right", "Lighting")
+LightingSection = addGroup(TimeTab, "Right", "Sky & Lighting")
 
 WeatherSection = addGroup(VisualsTab, "Left", "Weather")
-VisualSettingsSection = addGroup(VisualsTab, "Right", "Visual Settings")
+VisualSettingsSection = addGroup(VisualsTab, "Right", "World Visuals")
 
-MenuKeySection = addGroup(KeybindsTab, "Left", "Menu Key")
+MenuKeySection = addGroup(KeybindsTab, "Left", "Menu")
 ScriptSection = addGroup(KeybindsTab, "Right", "Script")
 
 TARGET_NAME = "PalletLightBrown"
@@ -118,13 +122,26 @@ RELEASE_CONFIRM_TIME = 0.12
 CHECK_INTERVAL = 0.08
 DETECTION_ENABLED = true
 
-EIK_SCALE = 1
-EIK_X = 0
-EIK_Y = 0
-EIK_Z = 0
-EIK_THICKNESS = 2
-EIK_TEXT = "EIK"
-EIK_TEXT_COLOR = Color3.fromRGB(255, 255, 255)
+PalletText_SCALE = 1
+PalletText_X = 0
+PalletText_Y = 0
+PalletText_Z = 0
+PalletText_THICKNESS = 2
+PalletText_TEXT = "Pallet"
+PalletText_TEXT_COLOR = Color3.fromRGB(255, 255, 255)
+PalletText_FONT = Enum.Font.GothamBlack
+FontNames={}
+for _,font in ipairs(Enum.Font:GetEnumItems()) do table.insert(FontNames,font.Name) end
+table.sort(FontNames)
+PalletTransparency = 0
+PalletColorFadeIn = true
+PalletMaterialFadeIn = false
+PalletColorFadeInTime = 0.22
+PalletMaterialFadeInTime = 0.5
+PalletColorFadeOut = true
+PalletMaterialFadeOut = true
+PalletColorFadeOutTime = 0.22
+PalletMaterialFadeOutTime = 0.5
 
 DEFAULT_FOV = 70
 CurrentFOV = DEFAULT_FOV
@@ -133,22 +150,70 @@ CurrentBrightness = Lighting.Brightness
 CurrentExposure = Lighting.ExposureCompensation
 CurrentAmbient = Lighting.Ambient
 CurrentOutdoorAmbient = Lighting.OutdoorAmbient
+PalletGlowOnGrab=false
+PlayerAutoHideUI=false
+PlayerOriginalFOV=nil
+PlayerLowHealthEffect=nil
 
 GreySkyEnabled = false
 SnowEnabled = false
 SnowRange = 100
 SnowAmount = 150
 SnowSpeed = 12
+VignetteEnabled = false
+CameraSwayEnabled = false
+CameraSwayAmount = 1.2
+CameraSwaySpeed = 1.5
+NightModeEnabled = false
+AutoRestoreOnRelease = false
+PalletPulseEnabled = false
+PalletPulseSpeed = 2
+PalletRainbowEnabled = false
+PalletRainbowSpeed = 1
+PalletTextOnlyVisible = true
+PalletTextOnlyOwnPallet = false
+PalletTextBillboard = false
+GrabLineWidth = 0.35
+GrabLineTextureSpeed = -4
+GrabLineTextureLength = 2
+GrabLineSegments = 20
+GrabLineBrightness = 1
+GrabLineFaceCamera = true
+GrabLineAutoApply = false
+GrabLinePulse = false
+TimeLockEnabled = false
+TimeLockSpeed = 0
+TimeAmbientIntensity = 1
+TimeOutdoorIntensity = 1
+TimeAtmosphereHaze = 0
+TimeAtmosphereGlare = 0
+TimeAtmosphereDensity = 0
+FullbrightSaved = false
+PalletGlowColor = Color3.fromRGB(255,210,80)
+PalletGlowFill = 0.65
+PalletGlowOutline = 0
+FullbrightEnabled = false
+FogDisabled = false
+OriginalFog = nil
 
 Pallets = {}
 PalletState = {}
-EIK_DATA = {}
+OriginalPalletState = {}
+MaterialFadeOverlays = {}
+MaterialAlwaysOn = false
+RemovePalletText = false
+DontChangePalletColor = false
+PalletMaterial = "WoodPlanks"
+PalletGlowEnabled = false
+SunRaysIntensity = 0.08
+SunRaysSpread = 0.5
+PalletText_DATA = {}
 BeamPart = nil
 CurrentBeam = nil
 SnowPart = nil
 SnowEmitter = nil
 
-SETTINGS_FILE = "EIK_Pallet_Settings.json"
+SETTINGS_FILE = "ftapVIS.json"
 
 OriginalLighting = {
     ClockTime = Lighting.ClockTime,
@@ -222,27 +287,85 @@ GrabLinePresets = {
 }
 
 CurrentGrabLineTexture = "Low Quality"
+CurrentGrabLineColor = Color3.fromRGB(255,255,255)
+GrabLineModified = false
+OriginalBeamState = nil
+OriginalBeamInstance = nil
+
+function captureBeamState(beam, force)
+    if not beam or not beam:IsA("Beam") then return end
+    if not force and OriginalBeamState and OriginalBeamInstance == beam then return end
+    local state={}
+    local props={"Texture","TextureMode","TextureLength","TextureSpeed","LightEmission","LightInfluence","Segments","Width0","Width1","Transparency","Color","FaceCamera","Enabled","Brightness","CurveSize0","CurveSize1","ZOffset"}
+    for _,name in ipairs(props) do
+        local ok,value=pcall(function() return beam[name] end)
+        if ok then state[name]=value end
+    end
+    OriginalBeamState=state
+    OriginalBeamInstance=beam
+end
+
+function restoreOriginalBeam()
+    local beam=getGrabBeam()
+    if not beam then return false end
+    if OriginalBeamInstance ~= beam then
+        captureBeamState(beam, true)
+        return false
+    end
+    if not OriginalBeamState then
+        captureBeamState(beam, true)
+        return false
+    end
+    for name,value in pairs(OriginalBeamState) do pcall(function() beam[name]=value end) end
+    GrabLineModified=false
+    return true
+end
 
 function applyBeamSettings(beam, settings)
     if not beam or not beam.Parent then return end
+    captureBeamState(beam, false)
     beam.Texture = settings.Texture
     beam.TextureMode = Enum.TextureMode.Wrap
-    beam.TextureLength = settings.TextureLength
-    beam.TextureSpeed = settings.TextureSpeed
+    beam.TextureLength = GrabLineTextureLength ~= nil and GrabLineTextureLength or settings.TextureLength
+    beam.TextureSpeed = GrabLineTextureSpeed ~= nil and GrabLineTextureSpeed or settings.TextureSpeed
     beam.LightEmission = 1
     beam.LightInfluence = 0
-    beam.Segments = settings.Segments
-    beam.Width0 = settings.Width0
-    beam.Width1 = settings.Width1
+    beam.Segments = GrabLineSegments ~= nil and GrabLineSegments or settings.Segments
+    beam.Width0 = GrabLineWidth ~= nil and GrabLineWidth or settings.Width0
+    beam.Width1 = GrabLineWidth ~= nil and GrabLineWidth or settings.Width1
     beam.Transparency = settings.Transparency
-    beam.Color = ColorSequence.new(Color3.fromRGB(255,255,255))
-    beam.FaceCamera = true
+    beam.Color = ColorSequence.new(copyColor(CurrentGrabLineColor))
+    beam.FaceCamera = GrabLineFaceCamera
+    beam.Brightness = GrabLineBrightness
+    GrabLineModified=true
+end
+
+function setGrabLineColor(color)
+    CurrentGrabLineColor = copyColor(color)
+    local beam = getGrabBeam()
+    if beam and GrabLineModified then
+        beam.Color = ColorSequence.new(copyColor(CurrentGrabLineColor))
+    end
+end
+
+function applySelectedGrabLine()
+    local beam=getGrabBeam()
+    if not beam then return false end
+    captureBeamState(beam, false)
+    local preset=GrabLinePresets[CurrentGrabLineTexture]
+    if not preset then return false end
+    applyBeamSettings(beam,preset)
+    return true
 end
 
 function refreshGrabLine()
-    BeamPart = getBeamPart()
-    CurrentBeam = getGrabBeam()
-    if CurrentBeam then applyBeamSettings(CurrentBeam, GrabLinePresets[CurrentGrabLineTexture]) end
+    local beam=getGrabBeam()
+    if not beam then return false end
+    if OriginalBeamInstance ~= beam or not OriginalBeamState then
+        captureBeamState(beam,true)
+        GrabLineModified=false
+    end
+    return restoreOriginalBeam()
 end
 
 function watchGrabParts(grabParts)
@@ -251,7 +374,7 @@ function watchGrabParts(grabParts)
         local beamPart = grabParts:WaitForChild("BeamPart", 5)
         if not beamPart then return end
         local beam = beamPart:WaitForChild("GrabBeam", 5)
-        if beam then task.defer(refreshGrabLine) end
+        if beam then task.defer(function() BeamPart=beamPart CurrentBeam=beam captureBeamState(beam,true) if GrabLineModified then applySelectedGrabLine() end end) end
     end)
 end
 
@@ -259,10 +382,10 @@ Workspace.ChildAdded:Connect(function(child)
     if child.Name == "GrabParts" then watchGrabParts(child) end
 end)
 Workspace.DescendantAdded:Connect(function(obj)
-    if obj.Name == "GrabParts" or obj.Name == "BeamPart" or obj.Name == "GrabBeam" then task.defer(refreshGrabLine) end
+    if obj.Name == "GrabParts" or obj.Name == "BeamPart" or obj.Name == "GrabBeam" then task.defer(function() local beam=getGrabBeam() if beam then captureBeamState(beam,true) if GrabLineModified then applySelectedGrabLine() end end end) end
 end)
 Workspace.DescendantRemoving:Connect(function(obj)
-    if obj == CurrentBeam or obj == BeamPart or obj.Name == "GrabBeam" or obj.Name == "BeamPart" or obj.Name == "GrabParts" then task.defer(refreshGrabLine) end
+    if obj == CurrentBeam or obj == BeamPart or obj.Name == "GrabBeam" or obj.Name == "BeamPart" or obj.Name == "GrabParts" then task.defer(function() local beam=getGrabBeam() if beam then captureBeamState(beam,true) if GrabLineModified then applySelectedGrabLine() end end end) end
 end)
 
 function isPallet(instance)
@@ -282,7 +405,7 @@ function findTopPart(pallet)
     local bestPart
     local bestArea = -math.huge
     for _, obj in ipairs(pallet:GetDescendants()) do
-        if obj:IsA("BasePart") and not obj:GetAttribute("EIK_Carrier") then
+        if obj:IsA("BasePart") and not obj:GetAttribute("PalletText_Carrier") and not obj:GetAttribute("PalletMaterialFadeOverlay") then
             local area = obj.Size.X * obj.Size.Z
             if area > bestArea then bestArea, bestPart = area, obj end
         end
@@ -293,44 +416,65 @@ end
 function getBaseParts(pallet)
     local parts = {}
     for _, obj in ipairs(pallet:GetDescendants()) do
-        if obj:IsA("BasePart") and not obj:GetAttribute("EIK_Carrier") then table.insert(parts, obj) end
+        if obj:IsA("BasePart") and not obj:GetAttribute("PalletText_Carrier") and not obj:GetAttribute("PalletMaterialFadeOverlay") then table.insert(parts, obj) end
     end
     return parts
 end
 
-function destroyEIK(pallet)
-    local data = EIK_DATA[pallet]
+function destroyPalletText(pallet)
+    local data = PalletText_DATA[pallet]
     if data then
         if data.carrier and data.carrier.Parent then data.carrier:Destroy() end
-        EIK_DATA[pallet] = nil
+        PalletText_DATA[pallet] = nil
     end
-    local old = pallet:FindFirstChild("EIK_Carrier")
+    local old = pallet:FindFirstChild("PalletText_Carrier")
     if old then old:Destroy() end
 end
 
-function updateEIK(pallet)
-    local data = EIK_DATA[pallet]
+function updatePalletText(pallet)
+    if RemovePalletText then
+        destroyPalletText(pallet)
+        return
+    end
+    local data = PalletText_DATA[pallet]
     if not data or not data.carrier or not data.carrier.Parent or not data.weld or not data.weld.Parent then return end
     local topPart = data.topPart
     if not topPart or not topPart.Parent then return end
-    data.weld.C0 = CFrame.new(EIK_X, (topPart.Size.Y / 2) + .02 + EIK_Y, EIK_Z)
-    data.uiScale.Scale = EIK_SCALE
-    data.text.Text = EIK_TEXT
-    data.text.TextColor3 = EIK_TEXT_COLOR
-    data.stroke.Thickness = EIK_THICKNESS
+    data.weld.C0 = CFrame.new(PalletText_X, (topPart.Size.Y / 2) + .02 + PalletText_Y, PalletText_Z)
+    data.uiScale.Scale = PalletText_SCALE
+    data.text.Text = PalletText_TEXT
+    data.text.TextColor3 = PalletText_TEXT_COLOR
+    data.text.Font = PalletText_FONT
+    data.stroke.Thickness = PalletText_THICKNESS
+    data.text.BackgroundColor3 = Color3.new(0,0,0)
+    data.text.BackgroundTransparency = 1
+    data.surface.AlwaysOnTop = not PalletTextOnlyVisible
+    local show=true
+    if PalletTextOnlyOwnPallet then
+        local state=PalletState[pallet]
+        show=state and state.touching==true or false
+    end
+    if show and PalletTextOnlyVisible and type(isPalletVisibleFromCamera)=="function" then
+        show=isPalletVisibleFromCamera(pallet,data.carrier)
+    end
+    data.text.Visible=show
 end
 
-function createEIK(pallet)
+function createPalletText(pallet)
     if not pallet or not pallet.Parent then return end
+    if RemovePalletText then
+        destroyPalletText(pallet)
+        return
+    end
     local topPart = findTopPart(pallet)
     if not topPart then return end
-    local oldData = EIK_DATA[pallet]
-    if oldData and oldData.topPart == topPart and oldData.carrier and oldData.carrier.Parent then updateEIK(pallet) return end
-    destroyEIK(pallet)
+    local oldData = PalletText_DATA[pallet]
+    if oldData and oldData.topPart == topPart and oldData.carrier and oldData.carrier.Parent then updatePalletText(pallet) return end
+    destroyPalletText(pallet)
 
     local carrier = Instance.new("Part")
-    carrier.Name = "EIK_Carrier"
-    carrier:SetAttribute("EIK_Carrier", true)
+    carrier.Name = "PalletText_Carrier"
+    carrier:SetAttribute("PalletText_Carrier", true)
     carrier.Size = Vector3.new(math.max(topPart.Size.X,.1),.025,math.max(topPart.Size.Z,.1))
     carrier.Transparency = 1
     carrier.CanCollide = false
@@ -339,125 +483,435 @@ function createEIK(pallet)
     carrier.CastShadow = false
     carrier.Massless = true
     carrier.Anchored = false
-    carrier.CFrame = topPart.CFrame * CFrame.new(EIK_X,(topPart.Size.Y/2)+.02+EIK_Y,EIK_Z)
+    carrier.CFrame = topPart.CFrame * CFrame.new(PalletText_X,(topPart.Size.Y/2)+.02+PalletText_Y,PalletText_Z)
     carrier.Parent = pallet
 
     local weld = Instance.new("Weld")
-    weld.Name = "EIK_Weld"
+    weld.Name = "PalletText_Weld"
     weld.Part0 = topPart
     weld.Part1 = carrier
-    weld.C0 = CFrame.new(EIK_X,(topPart.Size.Y/2)+.02+EIK_Y,EIK_Z)
+    weld.C0 = CFrame.new(PalletText_X,(topPart.Size.Y/2)+.02+PalletText_Y,PalletText_Z)
     weld.C1 = CFrame.new()
     weld.Parent = carrier
 
     local surface = Instance.new("SurfaceGui")
-    surface.Name = "EIK_Surface"
+    surface.Name = "PalletText_Surface"
     surface.Face = Enum.NormalId.Top
     surface.AlwaysOnTop = true
+    surface.LightInfluence = 0
     surface.SizingMode = Enum.SurfaceGuiSizingMode.PixelsPerStud
     surface.PixelsPerStud = 100
     surface.Parent = carrier
 
     local text = Instance.new("TextLabel")
-    text.Name = "EIK"
+    text.Name = "PalletText"
     text.AnchorPoint = Vector2.new(.5,.5)
     text.Position = UDim2.fromScale(.5,.5)
     text.Size = UDim2.fromScale(.72,.72)
     text.BackgroundTransparency = 1
-    text.Text = EIK_TEXT
-    text.TextColor3 = EIK_TEXT_COLOR
-    text.Font = Enum.Font.GothamBlack
+    text.Text = PalletText_TEXT
+    text.TextColor3 = PalletText_TEXT_COLOR
+    text.Font = PalletText_FONT
     text.TextScaled = true
     text.TextWrapped = false
     text.Parent = surface
 
     local stroke = Instance.new("UIStroke")
-    stroke.Name = "EIKStroke"
-    stroke.Thickness = EIK_THICKNESS
-    stroke.Color = EIK_TEXT_COLOR
+    stroke.Name = "PalletTextStroke"
+    stroke.Thickness = PalletText_THICKNESS
+    stroke.Color = PalletText_TEXT_COLOR
     stroke.Parent = text
 
     local uiScale = Instance.new("UIScale")
-    uiScale.Name = "EIKScale"
-    uiScale.Scale = EIK_SCALE
+    uiScale.Name = "PalletTextScale"
+    uiScale.Scale = PalletText_SCALE
     uiScale.Parent = text
 
-    EIK_DATA[pallet] = {topPart=topPart,carrier=carrier,weld=weld,text=text,stroke=stroke,uiScale=uiScale}
-    updateEIK(pallet)
+    PalletText_DATA[pallet] = {pallet=pallet,topPart=topPart,carrier=carrier,weld=weld,text=text,stroke=stroke,uiScale=uiScale,surface=surface}
+    updatePalletText(pallet)
 end
 
-function refreshAllEIK()
+function refreshAllPalletText()
     for pallet in pairs(Pallets) do
-        if pallet and pallet.Parent then destroyEIK(pallet) task.defer(createEIK,pallet) end
-    end
-end
-
-function updateAllEIK()
-    for pallet in pairs(Pallets) do
-        if pallet and pallet.Parent then updateEIK(pallet) end
-    end
-end
-
-function tweenPalletColor(pallet,color)
-    if not pallet or not pallet.Parent then return end
-    local state = PalletState[pallet]
-    if not state or state.targetColor == color then return end
-    state.targetColor = color
-    state.tweenId = state.tweenId + 1
-    local id = state.tweenId
-    for _, part in ipairs(getBaseParts(pallet)) do
-        if part and part.Parent then
-            TweenService:Create(part,TweenInfo.new(FADE_TIME,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{Color=color}):Play()
+        if pallet and pallet.Parent then
+            destroyPalletText(pallet)
+            if not RemovePalletText then task.defer(createPalletText,pallet) end
         end
     end
-    task.delay(FADE_TIME+.03,function()
-        local latest = PalletState[pallet]
-        if not latest or latest.tweenId ~= id then return end
-        for _, part in ipairs(getBaseParts(pallet)) do if part and part.Parent then part.Color=color end end
+end
+
+function setRemovePalletText(value)
+    RemovePalletText=value==true
+    if RemovePalletText then
+        for pallet in pairs(Pallets) do
+            if pallet and pallet.Parent then destroyPalletText(pallet) end
+        end
+    else
+        refreshAllPalletText()
+    end
+end
+
+function rebuildPalletText()
+    PalletText_TEXT="Pallet"
+    if Options and Options.PalletTextText then pcall(function() Options.PalletTextText:SetValue("Pallet") end) end
+    refreshAllPalletText()
+end
+
+function updateAllPalletText()
+    for pallet in pairs(Pallets) do
+        if pallet and pallet.Parent then updatePalletText(pallet) end
+    end
+end
+
+function tweenPalletColor(pallet,color,duration,onComplete)
+    if not pallet or not pallet.Parent then return end
+    local state=PalletState[pallet]
+    if not state then return end
+    state.tweenId=state.tweenId+1
+    local id=state.tweenId
+    duration=math.max(0,tonumber(duration) or 0)
+    if duration<=0 then
+        for _,part in ipairs(getBaseParts(pallet)) do
+            if part and part.Parent then part.Color=copyColor(color) end
+        end
+        if onComplete then onComplete() end
+        return
+    end
+    local tweens={}
+    for _,part in ipairs(getBaseParts(pallet)) do
+        if part and part.Parent then
+            tweens[#tweens+1]=TweenService:Create(part,TweenInfo.new(duration,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{Color=copyColor(color)})
+            tweens[#tweens]:Play()
+        end
+    end
+    task.delay(duration+.03,function()
+        local latest=PalletState[pallet]
+        if not latest or latest.tweenId~=id or not pallet.Parent then return end
+        for _,part in ipairs(getBaseParts(pallet)) do
+            if part and part.Parent then part.Color=copyColor(color) end
+        end
+        if onComplete then onComplete() end
     end)
+end
+
+function destroyMaterialFadeOverlays(pallet)
+    local list=MaterialFadeOverlays[pallet]
+    if list then
+        for _,overlay in ipairs(list) do
+            if overlay and overlay.Parent then overlay:Destroy() end
+        end
+    end
+    MaterialFadeOverlays[pallet]=nil
+end
+
+function makeMaterialFadeOverlay(pallet,part,material,color)
+    if not part or not part.Parent then return nil end
+    local overlay
+    local ok=pcall(function() overlay=part:Clone() end)
+    if not ok or not overlay then return nil end
+    for _,child in ipairs(overlay:GetChildren()) do
+        if not (child:IsA("SpecialMesh") or child:IsA("SurfaceAppearance") or child:IsA("Texture") or child:IsA("Decal")) then
+            child:Destroy()
+        end
+    end
+    overlay.Name="PalletMaterialFadeOverlay"
+    overlay:SetAttribute("PalletMaterialFadeOverlay",true)
+    overlay.Material=material
+    overlay.MaterialVariant=""
+    overlay.Color=copyColor(color)
+    overlay.Transparency=1
+    overlay.LocalTransparencyModifier=0
+    overlay.CanCollide=false
+    overlay.CanTouch=false
+    overlay.CanQuery=false
+    overlay.Massless=true
+    overlay.CastShadow=false
+    overlay.Anchored=false
+    -- Put the temporary surface just outside the real one to prevent z-fighting.
+    overlay.Size=part.Size+Vector3.new(.01,.01,.01)
+    overlay.CFrame=part.CFrame
+    overlay.Parent=pallet
+    local weld=Instance.new("WeldConstraint")
+    weld.Part0=part
+    weld.Part1=overlay
+    weld.Parent=overlay
+    return overlay
+end
+
+function startMaterialFadeIn(pallet,duration)
+    local state=PalletState[pallet]
+    local original=OriginalPalletState[pallet]
+    local material=Enum.Material[PalletMaterial]
+    if not pallet or not pallet.Parent or not state or not original or not material then return end
+    state.materialFadeId=(state.materialFadeId or 0)+1
+    local id=state.materialFadeId
+    destroyMaterialFadeOverlays(pallet)
+    if duration<=0 then
+        for part in pairs(original.Parts) do
+            if part and part.Parent then part.Material=material part.MaterialVariant="" end
+        end
+        return
+    end
+    local list={}
+    MaterialFadeOverlays[pallet]=list
+    for part,values in pairs(original.Parts) do
+        if part and part.Parent then
+            local overlayColor=DontChangePalletColor and part.Color or PALLET_CHANGE_COLOR
+            local overlay=makeMaterialFadeOverlay(pallet,part,material,overlayColor)
+            if overlay then
+                list[#list+1]=overlay
+                TweenService:Create(overlay,TweenInfo.new(duration,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{Transparency=values.Transparency}):Play()
+            else
+                part.Material=material
+                part.MaterialVariant=""
+            end
+        end
+    end
+    task.delay(duration,function()
+        local latest=PalletState[pallet]
+        if not latest or latest.materialFadeId~=id or not latest.touching or not pallet.Parent then return end
+        for part in pairs(original.Parts) do
+            if part and part.Parent then part.Material=material part.MaterialVariant="" end
+        end
+        RunService.RenderStepped:Wait()
+        latest=PalletState[pallet]
+        if not latest or latest.materialFadeId~=id or not latest.touching then return end
+        destroyMaterialFadeOverlays(pallet)
+    end)
+end
+
+function startMaterialFadeOut(pallet,duration,releaseId)
+    local state=PalletState[pallet]
+    local original=OriginalPalletState[pallet]
+    if not pallet or not pallet.Parent or not state or not original then return end
+    state.materialFadeId=(state.materialFadeId or 0)+1
+    local id=state.materialFadeId
+    destroyMaterialFadeOverlays(pallet)
+    if duration<=0 then
+        for part,values in pairs(original.Parts) do
+            if part and part.Parent then part.Material=values.Material part.MaterialVariant=values.MaterialVariant end
+        end
+        return
+    end
+    local list={}
+    MaterialFadeOverlays[pallet]=list
+    for part,values in pairs(original.Parts) do
+        if part and part.Parent then
+            local overlay=makeMaterialFadeOverlay(pallet,part,part.Material,part.Color)
+            if overlay then
+                overlay.Transparency=part.Transparency
+                list[#list+1]=overlay
+                TweenService:Create(overlay,TweenInfo.new(duration,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{Transparency=1}):Play()
+            end
+            part.Material=values.Material
+            part.MaterialVariant=values.MaterialVariant
+        end
+    end
+    task.delay(duration,function()
+        local latest=PalletState[pallet]
+        if not latest or latest.materialFadeId~=id or latest.touching or latest.tweenId~=releaseId or not pallet.Parent then return end
+        destroyMaterialFadeOverlays(pallet)
+    end)
+end
+
+function applyGrabbedPalletMaterial(pallet)
+    if not pallet or not pallet.Parent then return end
+    local state=PalletState[pallet]
+    if not state or not state.touching then return end
+    rememberPalletState(pallet)
+    local material=Enum.Material[PalletMaterial]
+    if not material then return end
+    destroyMaterialFadeOverlays(pallet)
+    for _,part in ipairs(getBaseParts(pallet)) do
+        if part and part.Parent then part.Material=material part.MaterialVariant="" end
+    end
+end
+
+function restoreOriginalMaterialOnly(pallet)
+    local original=OriginalPalletState[pallet]
+    if not original then return end
+    for part,values in pairs(original.Parts) do
+        if part and part.Parent then part.Material=values.Material part.MaterialVariant=values.MaterialVariant end
+    end
+end
+
+function applyGrabbedEffects(pallet)
+    if not pallet or not pallet.Parent then return end
+    local state=PalletState[pallet]
+    if not state or not state.touching then return end
+    rememberPalletState(pallet)
+    state.targetColor=DontChangePalletColor and nil or copyColor(PALLET_CHANGE_COLOR)
+    state.materialFadeId=(state.materialFadeId or 0)+1
+    destroyMaterialFadeOverlays(pallet)
+    if MaterialAlwaysOn then
+        applyPalletMaterial(pallet,PalletMaterial)
+    else
+        startMaterialFadeIn(pallet,PalletMaterialFadeInTime)
+    end
+    if DontChangePalletColor then
+        local original=OriginalPalletState[pallet]
+        if original then
+            for part,values in pairs(original.Parts) do
+                if part and part.Parent then part.Color=copyColor(values.Color) end
+            end
+        end
+    else
+        tweenPalletColor(pallet,PALLET_CHANGE_COLOR,PalletColorFadeInTime)
+    end
 end
 
 function restorePallet(pallet)
     if not pallet or not pallet.Parent then return end
-    local state = PalletState[pallet]
-    if state then state.releaseTime=nil state.touching=false end
-    tweenPalletColor(pallet,NORMAL_COLOR)
+    local state=PalletState[pallet]
+    if state then
+        state.releaseTime=nil
+        state.touching=false
+        state.targetColor=nil
+        state.tweenId=state.tweenId+1
+        state.materialFadeId=(state.materialFadeId or 0)+1
+    end
+    local original=OriginalPalletState[pallet]
+    if not original then return end
+    destroyMaterialFadeOverlays(pallet)
+    local releaseId=state and state.tweenId or 0
+
+    if MaterialAlwaysOn then
+        applyPalletMaterial(pallet,PalletMaterial)
+    elseif PalletMaterialFadeOutTime>0 then
+        startMaterialFadeOut(pallet,PalletMaterialFadeOutTime,releaseId)
+    else
+        restoreOriginalMaterialOnly(pallet)
+    end
+
+    for part,values in pairs(original.Parts) do
+        if part and part.Parent then
+            safeSet(part,"Transparency",values.Transparency)
+            safeSet(part,"LocalTransparencyModifier",values.LocalTransparencyModifier)
+            safeSet(part,"Reflectance",values.Reflectance)
+        end
+    end
+
+    if DontChangePalletColor or PalletColorFadeOutTime<=0 then
+        for part,values in pairs(original.Parts) do
+            if part and part.Parent then part.Color=copyColor(values.Color) end
+        end
+    else
+        for part,values in pairs(original.Parts) do
+            if part and part.Parent then
+                TweenService:Create(part,TweenInfo.new(PalletColorFadeOutTime,Enum.EasingStyle.Quad,Enum.EasingDirection.Out),{Color=copyColor(values.Color)}):Play()
+            end
+        end
+        task.delay(PalletColorFadeOutTime+.03,function()
+            local latest=PalletState[pallet]
+            if not latest or latest.touching or latest.tweenId~=releaseId or not pallet.Parent then return end
+            for part,values in pairs(original.Parts) do
+                if part and part.Parent then part.Color=copyColor(values.Color) end
+            end
+        end)
+    end
+end
+
+function setMaterialAlwaysOn(value)
+    MaterialAlwaysOn=value==true
+    for pallet in pairs(Pallets) do
+        if pallet and pallet.Parent then
+            local state=PalletState[pallet]
+            if state then state.materialFadeId=(state.materialFadeId or 0)+1 end
+            destroyMaterialFadeOverlays(pallet)
+            if MaterialAlwaysOn then
+                applyPalletMaterial(pallet,PalletMaterial)
+            elseif state and state.touching then
+                applyGrabbedEffects(pallet)
+            else
+                restoreOriginalMaterialOnly(pallet)
+            end
+        end
+    end
+end
+
+function setDontChangePalletColor(value)
+    DontChangePalletColor=value==true
+    for pallet in pairs(Pallets) do
+        if pallet and pallet.Parent then
+            local state=PalletState[pallet]
+            local original=OriginalPalletState[pallet]
+            if DontChangePalletColor and original then
+                if state then state.tweenId=state.tweenId+1 state.targetColor=nil end
+                for part,values in pairs(original.Parts) do
+                    if part and part.Parent then part.Color=copyColor(values.Color) end
+                end
+            elseif state and state.touching then
+                tweenPalletColor(pallet,PALLET_CHANGE_COLOR,PalletColorFadeInTime)
+            end
+        end
+    end
+end
+
+function setPalletMaterialSelection(value)
+    local name=tostring(value or "WoodPlanks")
+    if not Enum.Material[name] then return end
+    PalletMaterial=name
+    for pallet in pairs(Pallets) do
+        if pallet and pallet.Parent then
+            local state=PalletState[pallet]
+            if state then state.materialFadeId=(state.materialFadeId or 0)+1 end
+            destroyMaterialFadeOverlays(pallet)
+            if MaterialAlwaysOn then
+                applyPalletMaterial(pallet,PalletMaterial)
+            elseif state and state.touching then
+                applyGrabbedEffects(pallet)
+            else
+                restoreOriginalMaterialOnly(pallet)
+            end
+        end
+    end
+end
+
+function setPalletFadeSettings()
+    for pallet in pairs(Pallets) do
+        if pallet and pallet.Parent then
+            local state=PalletState[pallet]
+            if state and state.touching then applyGrabbedEffects(pallet) end
+        end
+    end
 end
 
 function restoreAll()
-    for pallet in pairs(Pallets) do if pallet and pallet.Parent then restorePallet(pallet) end end
+    for pallet in pairs(Pallets) do
+        if pallet and pallet.Parent then restorePallet(pallet) end
+    end
 end
 
 function registerPallet(pallet)
     if not isPallet(pallet) or Pallets[pallet] then return end
     Pallets[pallet]=true
     PalletState[pallet]={touching=false,releaseTime=nil,targetColor=nil,tweenId=0}
-    for _, part in ipairs(getBaseParts(pallet)) do part.Color=NORMAL_COLOR end
-    task.defer(function() if pallet and pallet.Parent then createEIK(pallet) end end)
+    rememberPalletState(pallet)
+    task.defer(function() if pallet and pallet.Parent then createPalletText(pallet) updatePalletGlow() end end)
 end
 
 function unregisterPallet(pallet)
     if not Pallets[pallet] then return end
-    destroyEIK(pallet)
+    destroyPalletText(pallet)
     Pallets[pallet]=nil
     PalletState[pallet]=nil
 end
 
-for _, obj in ipairs(Workspace:GetDescendants()) do if isPallet(obj) then registerPallet(obj) end end
+task.defer(function() for _, obj in ipairs(Workspace:GetDescendants()) do if isPallet(obj) then registerPallet(obj) end end end)
 
 Workspace.DescendantAdded:Connect(function(obj)
     if obj:IsA("Model") and obj.Name==TARGET_NAME then task.defer(function() registerPallet(obj) end) return end
-    if obj:IsA("BasePart") then
+    if obj:IsA("BasePart") and not obj:GetAttribute("PalletMaterialFadeOverlay") then
         local pallet=getPalletFromPart(obj)
-        if pallet and Pallets[pallet] then task.defer(function() if pallet.Parent then createEIK(pallet) end end) end
+        if pallet and Pallets[pallet] then task.defer(function() if pallet.Parent then createPalletText(pallet) end end) end
     end
 end)
 
 Workspace.DescendantRemoving:Connect(function(obj)
     if Pallets[obj] then unregisterPallet(obj) return end
-    if obj:IsA("BasePart") then
+    if obj:IsA("BasePart") and not obj:GetAttribute("PalletMaterialFadeOverlay") then
         local pallet=getPalletFromPart(obj)
-        if pallet and Pallets[pallet] then task.defer(function() if pallet.Parent then createEIK(pallet) end end) end
+        if pallet and Pallets[pallet] then task.defer(function() if pallet.Parent then createPalletText(pallet) end end) end
     end
 end)
 
@@ -469,7 +923,10 @@ function getOverlappingPallets()
     local result={}
     if not BeamPart or not BeamPart.Parent then BeamPart=getBeamPart() end
     if not BeamPart then return result end
-    for _, part in ipairs(Workspace:GetPartsInPart(BeamPart,overlapParams)) do
+    local size=BeamPart.Size+Vector3.new(.35,.35,.35)
+    local ok,parts=pcall(function() return Workspace:GetPartBoundsInBox(BeamPart.CFrame,size,overlapParams) end)
+    if not ok or type(parts)~="table" then return result end
+    for _,part in ipairs(parts) do
         if part~=BeamPart then
             local pallet=getPalletFromPart(part)
             if pallet and Pallets[pallet] then result[pallet]=true end
@@ -492,10 +949,12 @@ task.spawn(function()
                     if state then
                         if touching[pallet] then
                             state.releaseTime=nil
-                            if not state.touching then state.touching=true tweenPalletColor(pallet,PALLET_CHANGE_COLOR) elseif state.targetColor~=PALLET_CHANGE_COLOR then tweenPalletColor(pallet,PALLET_CHANGE_COLOR) end
+                            if not state.touching then activatePallet(pallet) elseif state.targetColor~=PALLET_CHANGE_COLOR then applyGrabbedEffects(pallet) end
                         elseif state.touching then
                             state.releaseTime=state.releaseTime or now
-                            if now-state.releaseTime>=RELEASE_CONFIRM_TIME then state.touching=false state.releaseTime=nil tweenPalletColor(pallet,NORMAL_COLOR) end
+                            if now-state.releaseTime>=RELEASE_CONFIRM_TIME then
+                                restorePallet(pallet)
+                            end
                         end
                     end
                 end
@@ -506,10 +965,10 @@ task.spawn(function()
 end)
 
 function getAtmosphere()
-    local atmosphere=Lighting:FindFirstChild("PalletEIK_Atmosphere")
+    local atmosphere=Lighting:FindFirstChild("Pallet_Atmosphere")
     if atmosphere and atmosphere:IsA("Atmosphere") then return atmosphere end
     atmosphere=Instance.new("Atmosphere")
-    atmosphere.Name="PalletEIK_Atmosphere"
+    atmosphere.Name="Pallet_Atmosphere"
     atmosphere.Parent=Lighting
     return atmosphere
 end
@@ -533,7 +992,7 @@ function restoreLighting()
         a.Haze=OriginalAtmosphere.Haze
         a.Glare=OriginalAtmosphere.Glare
     else
-        local a=Lighting:FindFirstChild("PalletEIK_Atmosphere")
+        local a=Lighting:FindFirstChild("Pallet_Atmosphere")
         if a then a:Destroy() end
     end
 end
@@ -554,7 +1013,7 @@ end
 function updateSnow()
     if not SnowPart or not SnowPart.Parent then
         SnowPart=Instance.new("Part")
-        SnowPart.Name="PalletEIK_Snow"
+        SnowPart.Name="Pallet_Snow"
         SnowPart.Anchored=true
         SnowPart.CanCollide=false
         SnowPart.CanTouch=false
@@ -820,28 +1279,28 @@ function getAttributeSafe(instance, name, fallback)
     return fallback
 end
 
-function setEIKLabelText(label, text)
+function setPalletTextLabelText(label, text)
     if not isTextLabel(label) then
         return
     end
-    label.Text = tostring(text or "EIK")
+    label.Text = tostring(text or "PalletText")
 end
 
-function setEIKLabelColor(label, color)
+function setPalletTextLabelColor(label, color)
     if not isTextLabel(label) then
         return
     end
     label.TextColor3 = copyColor(color)
 end
 
-function setEIKLabelStroke(label, thickness, color)
+function setPalletTextLabelStroke(label, thickness, color)
     if not isTextLabel(label) then
         return
     end
-    local stroke = label:FindFirstChild("EIKStroke")
+    local stroke = label:FindFirstChild("PalletTextStroke")
     if not stroke then
         stroke = trackInstance(Instance.new("UIStroke"))
-        stroke.Name = "EIKStroke"
+        stroke.Name = "PalletTextStroke"
         stroke.Parent = label
     end
     stroke.Thickness = clampNumber(thickness, 0, 10, 2)
@@ -849,52 +1308,82 @@ function setEIKLabelStroke(label, thickness, color)
     stroke.Transparency = 0
 end
 
-function setEIKScale(label, scale)
+function setPalletTextScale(label, scale)
     if not isTextLabel(label) then
         return
     end
-    local uiScale = label:FindFirstChild("EIKScale")
+    local uiScale = label:FindFirstChild("PalletTextScale")
     if not uiScale then
         uiScale = trackInstance(Instance.new("UIScale"))
-        uiScale.Name = "EIKScale"
+        uiScale.Name = "PalletTextScale"
         uiScale.Parent = label
     end
     uiScale.Scale = clampNumber(scale, 0, 100, 1)
 end
 
-function setEIKPosition(carrier, x, y, z)
+function setPalletTextPosition(carrier, x, y, z)
     if not isValidInstance(carrier) or not carrier:IsA("BasePart") then
         return
     end
-    carrier:SetAttribute("EIK_X", x)
-    carrier:SetAttribute("EIK_Y", y)
-    carrier:SetAttribute("EIK_Z", z)
-    local weld = carrier:FindFirstChild("EIKWeld")
+    carrier:SetAttribute("PalletText_X", x)
+    carrier:SetAttribute("PalletText_Y", y)
+    carrier:SetAttribute("PalletText_Z", z)
+    local weld = carrier:FindFirstChild("PalletText_Weld")
     if weld and weld:IsA("Weld") then
         weld.C0 = CFrame.new(x, y, z)
     end
 end
 
-function updateOneEIKData(data)
-    if not data then
-        return
-    end
-    local label = data.text
-    local carrier = data.carrier
-    if label and label.Parent then
-        setEIKLabelText(label, EIK_TEXT)
-        setEIKLabelColor(label, EIK_TEXT_COLOR)
-        setEIKLabelStroke(label, EIK_THICKNESS, Color3.new(0, 0, 0))
-        setEIKScale(label, EIK_SCALE)
-    end
-    if carrier and carrier.Parent then
-        setEIKPosition(carrier, EIK_X, EIK_Y, EIK_Z)
-    end
+function isPalletVisibleFromCamera(pallet, topPart)
+    local camera=getCamera()
+    if not camera or not pallet or not topPart then return false end
+    local origin=camera.CFrame.Position
+    local target=topPart.Position
+    local direction=target-origin
+    if direction.Magnitude<=0.01 then return true end
+    local params=RaycastParams.new()
+    params.FilterType=Enum.RaycastFilterType.Exclude
+    local ignore={pallet}
+    local character=getCharacter()
+    if character then table.insert(ignore,character) end
+    params.FilterDescendantsInstances=ignore
+    local hit=Workspace:Raycast(origin,direction,params)
+    return hit==nil
 end
 
-function updateEveryEIK()
-    for _, data in pairs(EIK_DATA) do
-        updateOneEIKData(data)
+function updateOnePalletTextData(data)
+    if not data then return end
+    if RemovePalletText then
+        if data.pallet then destroyPalletText(data.pallet) end
+        return
+    end
+    local label=data.text
+    local pallet=data.pallet
+    if not label or not label.Parent or not pallet or not pallet.Parent then return end
+    local show=true
+    if PalletTextOnlyOwnPallet then
+        local state=PalletState[pallet]
+        show=state and state.touching==true or false
+    end
+    if show and PalletTextOnlyVisible then
+        show=isPalletVisibleFromCamera(pallet,data.carrier or data.topPart)
+    end
+    label.Visible=show
+    local carrier=data.carrier
+    if carrier and carrier.Parent then
+        setPalletTextPosition(carrier,PalletText_X,PalletText_Y,PalletText_Z)
+    end
+    setPalletTextLabelText(label,PalletText_TEXT)
+    setPalletTextLabelColor(label,PalletText_TEXT_COLOR)
+    setPalletTextLabelStroke(label,PalletText_THICKNESS,PalletText_TEXT_COLOR)
+    setPalletTextScale(label,PalletText_SCALE)
+    label.BackgroundTransparency=1
+    if data.surface then data.surface.AlwaysOnTop=not PalletTextOnlyVisible end
+end
+
+function updateEveryPalletText()
+    for _, data in pairs(PalletText_DATA) do
+        updateOnePalletTextData(data)
     end
 end
 
@@ -913,44 +1402,47 @@ function getNearestPallet(maxDistance)
     return nearest, nearestDistance
 end
 
+
 function clearPalletState(pallet)
     if pallet then
+        destroyMaterialFadeOverlays(pallet)
         PalletState[pallet] = nil
-        EIK_DATA[pallet] = nil
+        OriginalPalletState[pallet] = nil
+        PalletText_DATA[pallet] = nil
     end
 end
 
 function rememberPalletState(pallet)
-    if not pallet or PalletState[pallet] then
-        return
+    if not pallet then return end
+    local state=OriginalPalletState[pallet]
+    if not state then
+        state={Parts={}}
+        OriginalPalletState[pallet]=state
     end
-    local state = {
-        Parts = {},
-        Attributes = {},
-    }
-    for _, part in ipairs(getBaseParts(pallet)) do
-        state.Parts[part] = {
-            Color = copyColor(part.Color),
-            Transparency = part.Transparency,
-            LocalTransparencyModifier = part.LocalTransparencyModifier,
-            Material = part.Material,
-            Reflectance = part.Reflectance,
-        }
+    for _,part in ipairs(getBaseParts(pallet)) do
+        if not state.Parts[part] then
+            state.Parts[part]={
+                Color=copyColor(part.Color),
+                Transparency=part.Transparency,
+                LocalTransparencyModifier=part.LocalTransparencyModifier,
+                Material=part.Material,
+                MaterialVariant=part.MaterialVariant,
+                Reflectance=part.Reflectance,
+            }
+        end
     end
-    PalletState[pallet] = state
 end
 
 function restoreRememberedPalletState(pallet)
-    local state = PalletState[pallet]
-    if not state then
-        return
-    end
+    local state = OriginalPalletState[pallet]
+    if not state then return end
     for part, values in pairs(state.Parts) do
         if part and part.Parent then
             safeSet(part, "Color", values.Color)
             safeSet(part, "Transparency", values.Transparency)
             safeSet(part, "LocalTransparencyModifier", values.LocalTransparencyModifier)
             safeSet(part, "Material", values.Material)
+            safeSet(part, "MaterialVariant", values.MaterialVariant)
             safeSet(part, "Reflectance", values.Reflectance)
         end
     end
@@ -991,21 +1483,28 @@ function setAllPalletsTransparency(transparency)
     end
 end
 
-function resetSinglePallet(pallet)
-    if not pallet then
-        return
+function setPalletTransparency(value)
+    PalletTransparency = clampNumber(value, 0, 25, 0)
+    local amount = PalletTransparency / 25
+    for pallet in pairs(Pallets) do
+        if isValidInstance(pallet) then
+            rememberPalletState(pallet)
+            local state=OriginalPalletState[pallet]
+            for _,part in ipairs(getBaseParts(pallet)) do
+                local original=state and state.Parts[part]
+                local target=original and original.Transparency or 0
+                if amount > 0 then target=target + ((1-target)*amount) end
+                safeSet(part,"Transparency",target)
+            end
+        end
     end
-    restoreRememberedPalletState(pallet)
-    clearPalletState(pallet)
 end
 
 function resetAllRememberedPallets()
-    for pallet in pairs(PalletState) do
-        if isValidInstance(pallet) then
-            restoreRememberedPalletState(pallet)
-        end
+    for pallet in pairs(OriginalPalletState) do
+        if isValidInstance(pallet) then restoreRememberedPalletState(pallet) end
     end
-    table.clear(PalletState)
+    table.clear(OriginalPalletState)
 end
 
 function makeBeamTransparency(strength)
@@ -1170,93 +1669,103 @@ end
 function resetCamera()
     CurrentFOV = DEFAULT_FOV
     applyFOV()
-    saveSettings()
+    if Options and Options.FOV then pcall(function() Options.FOV:SetValue(DEFAULT_FOV) end) end
 end
 
 function setCameraFOV(value)
     CurrentFOV = clampNumber(value, 50, 120, DEFAULT_FOV)
     applyFOV()
-    saveSettings()
 end
 
-function setEIKText(value)
+
+function setPalletTextFont(value)
+    local name=tostring(value or "GothamBlack")
+    local font=Enum.Font[name]
+    if font then
+        PalletText_FONT=font
+        updateAllPalletText()
+    end
+end
+
+function setPalletTextText(value)
     value = tostring(value or "")
     if value == "" then
-        value = "EIK"
+        value = "Pallet"
     end
-    EIK_TEXT = value
-    updateAllEIK()
+    PalletText_TEXT = value
+    updateAllPalletText()
 end
 
-function setEIKTextColor(color)
-    EIK_TEXT_COLOR = copyColor(color)
-    updateAllEIK()
+function setPalletTextTextColor(color)
+    PalletText_TEXT_COLOR = copyColor(color)
+    updateAllPalletText()
 end
 
-function setEIKScaleValue(value)
-    EIK_SCALE = clampNumber(value, 0, 100, 1)
-    updateAllEIK()
+function setPalletTextScaleValue(value)
+    PalletText_SCALE = clampNumber(value, 0, 100, 1)
+    updateAllPalletText()
 end
 
-function setEIKThicknessValue(value)
-    EIK_THICKNESS = clampNumber(value, 0, 10, 2)
-    updateAllEIK()
+function setPalletTextThicknessValue(value)
+    PalletText_THICKNESS = clampNumber(value, 0, 10, 2)
+    updateAllPalletText()
 end
 
-function setEIKX(value)
-    EIK_X = clampNumber(value, -5, 5, 0)
-    updateAllEIK()
+function setPalletTextX(value)
+    PalletText_X = clampNumber(value, -5, 5, 0)
+    updateAllPalletText()
 end
 
-function setEIKY(value)
-    EIK_Y = clampNumber(value, -2, 2, 0)
-    updateAllEIK()
+function setPalletTextY(value)
+    PalletText_Y = clampNumber(value, -2, 2, 0)
+    updateAllPalletText()
 end
 
-function setEIKZ(value)
-    EIK_Z = clampNumber(value, -5, 5, 0)
-    updateAllEIK()
+function setPalletTextZ(value)
+    PalletText_Z = clampNumber(value, -5, 5, 0)
+    updateAllPalletText()
 end
 
-function resetEIKValues()
-    EIK_SCALE = 1
-    EIK_THICKNESS = 2
-    EIK_X = 0
-    EIK_Y = 0
-    EIK_Z = 0
-    EIK_TEXT = "EIK"
-    EIK_TEXT_COLOR = Color3.fromRGB(255, 255, 255)
-    updateAllEIK()
+function resetPalletTextValues()
+    PalletText_SCALE = 1
+    PalletText_THICKNESS = 2
+    PalletText_X = 0
+    PalletText_Y = 0
+    PalletText_Z = 0
+    PalletText_TEXT = "Pallet"
+    PalletText_TEXT_COLOR = Color3.fromRGB(255, 255, 255)
+    PalletText_FONT = Enum.Font.GothamBlack
+    updateAllPalletText()
 end
 
-function getEIKData(pallet)
-    return pallet and EIK_DATA[pallet] or nil
+function getPalletTextData(pallet)
+    return pallet and PalletText_DATA[pallet] or nil
 end
 
-function getEIKTextLabel(pallet)
-    local data = getEIKData(pallet)
+function getPalletTextTextLabel(pallet)
+    local data = getPalletTextData(pallet)
     return data and data.text or nil
 end
 
-function getEIKCarrier(pallet)
-    local data = getEIKData(pallet)
+function getPalletTextCarrier(pallet)
+    local data = getPalletTextData(pallet)
     return data and data.carrier or nil
 end
 
-function updatePalletEIK(pallet)
+function updatePalletTextVisible(pallet)
     if not pallet or not pallet.Parent then
         return
     end
-    local data = EIK_DATA[pallet]
+    local data = PalletText_DATA[pallet]
     if data then
-        updateOneEIKData(data)
+        updateOnePalletTextData(data)
     end
 end
 
-function updateVisiblePalletEIK()
+function updateVisiblePalletText()
     for pallet in pairs(Pallets) do
         if pallet and pallet.Parent then
-            updatePalletEIK(pallet)
+            updatePalletTextVisible(pallet)
         end
     end
 end
@@ -1281,9 +1790,9 @@ function getProcessedPalletCount()
     return count
 end
 
-function getActiveEIKCount()
+function getActivePalletTextCount()
     local count = 0
-    for pallet, data in pairs(EIK_DATA) do
+    for pallet, data in pairs(PalletText_DATA) do
         if pallet and pallet.Parent and data then
             count += 1
         end
@@ -1296,62 +1805,123 @@ function cleanupDeadPallets()
         if not pallet or not pallet.Parent then
             Pallets[pallet] = nil
             PalletState[pallet] = nil
-            EIK_DATA[pallet] = nil
+            OriginalPalletState[pallet] = nil
+            PalletText_DATA[pallet] = nil
         end
     end
 end
 
 function restoreEverything()
-    DETECTION_ENABLED = true
-    restoreAll()
-    resetAllRememberedPallets()
-    resetEIKValues()
-    resetCamera()
+    State.Enabled=true
+    DETECTION_ENABLED=true
+    MaterialAlwaysOn=false
+    RemovePalletText=false
+    PalletTextOnlyOwnPallet=false
+    PalletTextOnlyVisible=true
+    DontChangePalletColor=false
+    PalletMaterial="WoodPlanks"
+    PalletTransparency=0
+    PalletColorFadeInTime=0.22
+    PalletColorFadeOutTime=0.22
+    PalletMaterialFadeInTime=0.5
+    PalletMaterialFadeOutTime=0.5
+    for pallet in pairs(Pallets) do
+        if pallet and pallet.Parent then
+            local state=PalletState[pallet]
+            if state then
+                state.touching=false
+                state.releaseTime=nil
+                state.targetColor=nil
+                state.tweenId=state.tweenId+1
+                state.materialFadeId=(state.materialFadeId or 0)+1
+            end
+            destroyMaterialFadeOverlays(pallet)
+            restoreRememberedPalletState(pallet)
+        end
+    end
+    restoreOriginalBeam()
+    GrabLineModified=false
+    CurrentGrabLineTexture="Low Quality"
+    CurrentGrabLineColor=Color3.fromRGB(255,255,255)
+    CurrentFOV=DEFAULT_FOV
+    applyFOV()
+    resetPalletTextValues()
     restoreLighting()
     removeSnow()
-    GreySkyEnabled = false
-    State.Enabled = true
+    PalletGlowEnabled=false
+    updatePalletGlow()
+    setFullbright(false)
+    setFogDisabled(false)
+    GreySkyEnabled=false
+    NightModeEnabled=false
+    TimeLockEnabled=false
+    TimeLockSpeed=0
+    local function setOption(name,value)
+        local option=Options and Options[name]
+        if option then pcall(function() option:SetValue(value) end) end
+    end
+    local function setToggle(name,value)
+        local toggle=Toggles and Toggles[name]
+        if toggle then pcall(function() toggle:SetValue(value) end) end
+    end
+    setToggle("BeamDetection",true)
+    setToggle("MaterialAlwaysOn",false)
+    setToggle("RemovePalletText",false)
+    setToggle("PalletTextOnlyOwnPallet",false)
+    setToggle("PalletTextOnlyVisible",true)
+    setToggle("DontChangePalletColor",false)
+    setToggle("NightMode",false)
+    setToggle("TimeLock",false)
+    setToggle("GreySky",false)
+    setToggle("Snow",false)
+    setToggle("PalletGlow",false)
+    setToggle("Fullbright",false)
+    setToggle("NoFog",false)
+    setOption("PalletMaterial","WoodPlanks")
+    setOption("PalletTransparency",0)
+    setOption("PalletColorFadeInTime",0.22)
+    setOption("PalletColorFadeOutTime",0.22)
+    setOption("PalletMaterialFadeInTime",0.5)
+    setOption("PalletMaterialFadeOutTime",0.5)
+    setOption("PalletTextText","Pallet")
+    setOption("PalletTextFont","GothamBlack")
+    if Options and Options.PalletTextTextColor then pcall(function() Options.PalletTextTextColor:SetValueRGB(Color3.fromRGB(255,255,255)) end) end
+    setOption("PalletTextScale",1)
+    setOption("PalletTextThickness",2)
+    setOption("PalletTextPositionX",0)
+    setOption("PalletTextPositionY",0)
+    setOption("PalletTextPositionZ",0)
+    setOption("FOV",DEFAULT_FOV)
+    setOption("GrabLineTexture","Low Quality")
+    setOption("Time",OriginalLighting.ClockTime)
+    setOption("TimeLockSpeed",0)
+    setOption("Brightness",OriginalLighting.Brightness)
+    setOption("Exposure",OriginalLighting.ExposureCompensation)
+    refreshAllPalletText()
+    if updateMaterialFadeVisibility then updateMaterialFadeVisibility() end
+    if updateColorFadeVisibility then updateColorFadeVisibility() end
 end
 
 function disableEverything()
-    DETECTION_ENABLED = false
-    State.Enabled = false
-    SnowEnabled = false
-    GreySkyEnabled = false
-    restoreAll()
-    resetAllRememberedPallets()
-    restoreLighting()
-    removeSnow()
-    setCurrentBeamEnabled(false)
-end
-
-function registerPallet(pallet)
-    if not pallet or not pallet:IsA("Model") or pallet.Name ~= TARGET_NAME then
-        return false
-    end
-    if Pallets[pallet] then
-        return false
-    end
-    Pallets[pallet] = true
-    return true
+    restoreEverything()
+    DETECTION_ENABLED=false
+    State.Enabled=false
+    if Toggles and Toggles.BeamDetection then pcall(function() Toggles.BeamDetection:SetValue(false) end) end
+    pcall(function() if Library.Unload then Library:Unload() end end)
 end
 
 function unregisterPallet(pallet)
     if not pallet then
         return
     end
-    destroyEIK(pallet)
+    destroyPalletText(pallet)
     PalletState[pallet] = nil
     Pallets[pallet] = nil
 end
 
 function registerExistingPallets()
     for _, object in ipairs(Workspace:GetDescendants()) do
-        if isPallet(object) then
-            if not Pallets[object] then
-                Pallets[object] = true
-            end
-        end
+        if isPallet(object) then registerPallet(object) end
     end
 end
 
@@ -1413,6 +1983,15 @@ function playerTouchesPallet(pallet)
     return #parts > 0
 end
 
+function activatePallet(pallet)
+    if not pallet or not Pallets[pallet] then return end
+    local state=PalletState[pallet]
+    if not state then return end
+    state.touching=true
+    state.releaseTime=nil
+    applyGrabbedEffects(pallet)
+end
+
 function touchCheckAllPallets()
     if not DETECTION_ENABLED then
         return
@@ -1432,8 +2011,8 @@ end
 
 function maintainRuntime()
     cleanupDeadPallets()
-    updateVisiblePalletEIK()
-    refreshGrabLine()
+    updateVisiblePalletText()
+    updatePalletGlow()
 end
 
 function setMenuVisible(visible)
@@ -1478,10 +2057,10 @@ function saveRuntimeSnapshot()
     State.Defaults.Exposure = CurrentExposure
     State.Defaults.Ambient = copyColor(CurrentAmbient)
     State.Defaults.OutdoorAmbient = copyColor(CurrentOutdoorAmbient)
-    State.Defaults.EIKText = EIK_TEXT
-    State.Defaults.EIKScale = EIK_SCALE
-    State.Defaults.EIKThickness = EIK_THICKNESS
-    State.Defaults.EIKColor = copyColor(EIK_TEXT_COLOR)
+    State.Defaults.PalletTextText = PalletText_TEXT
+    State.Defaults.PalletTextScale = PalletText_SCALE
+    State.Defaults.PalletTextThickness = PalletText_THICKNESS
+    State.Defaults.PalletTextColor = copyColor(PalletText_TEXT_COLOR)
 end
 
 function restoreRuntimeSnapshot()
@@ -1504,1023 +2083,23 @@ function restoreRuntimeSnapshot()
     if defaults.OutdoorAmbient then
         CurrentOutdoorAmbient = copyColor(defaults.OutdoorAmbient)
     end
-    if defaults.EIKText then
-        EIK_TEXT = defaults.EIKText
+    if defaults.PalletTextText then
+        PalletText_TEXT = defaults.PalletTextText
     end
-    if defaults.EIKScale then
-        EIK_SCALE = defaults.EIKScale
+    if defaults.PalletTextScale then
+        PalletText_SCALE = defaults.PalletTextScale
     end
-    if defaults.EIKThickness then
-        EIK_THICKNESS = defaults.EIKThickness
+    if defaults.PalletTextThickness then
+        PalletText_THICKNESS = defaults.PalletTextThickness
     end
-    if defaults.EIKColor then
-        EIK_TEXT_COLOR = copyColor(defaults.EIKColor)
+    if defaults.PalletTextColor then
+        PalletText_TEXT_COLOR = copyColor(defaults.PalletTextColor)
     end
     applyFOV()
-    updateAllEIK()
+    updateAllPalletText()
 end
 
 saveRuntimeSnapshot()
-
-function EIKUtility_1(value)
-    if value == nil then
-        return 1
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 1)
-    end
-    return value
-end
-
-function EIKUtility_2(value)
-    if value == nil then
-        return 2
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 2)
-    end
-    return value
-end
-
-function EIKUtility_3(value)
-    if value == nil then
-        return 3
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 3)
-    end
-    return value
-end
-
-function EIKUtility_4(value)
-    if value == nil then
-        return 4
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 4)
-    end
-    return value
-end
-
-function EIKUtility_5(value)
-    if value == nil then
-        return 5
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 5)
-    end
-    return value
-end
-
-function EIKUtility_6(value)
-    if value == nil then
-        return 6
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 6)
-    end
-    return value
-end
-
-function EIKUtility_7(value)
-    if value == nil then
-        return 7
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 7)
-    end
-    return value
-end
-
-function EIKUtility_8(value)
-    if value == nil then
-        return 8
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 8)
-    end
-    return value
-end
-
-function EIKUtility_9(value)
-    if value == nil then
-        return 9
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 9)
-    end
-    return value
-end
-
-function EIKUtility_10(value)
-    if value == nil then
-        return 10
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 10)
-    end
-    return value
-end
-
-function EIKUtility_11(value)
-    if value == nil then
-        return 11
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 11)
-    end
-    return value
-end
-
-function EIKUtility_12(value)
-    if value == nil then
-        return 12
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 12)
-    end
-    return value
-end
-
-function EIKUtility_13(value)
-    if value == nil then
-        return 13
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 13)
-    end
-    return value
-end
-
-function EIKUtility_14(value)
-    if value == nil then
-        return 14
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 14)
-    end
-    return value
-end
-
-function EIKUtility_15(value)
-    if value == nil then
-        return 15
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 15)
-    end
-    return value
-end
-
-function EIKUtility_16(value)
-    if value == nil then
-        return 16
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 16)
-    end
-    return value
-end
-
-function EIKUtility_17(value)
-    if value == nil then
-        return 17
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 17)
-    end
-    return value
-end
-
-function EIKUtility_18(value)
-    if value == nil then
-        return 18
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 18)
-    end
-    return value
-end
-
-function EIKUtility_19(value)
-    if value == nil then
-        return 19
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 19)
-    end
-    return value
-end
-
-function EIKUtility_20(value)
-    if value == nil then
-        return 20
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 20)
-    end
-    return value
-end
-
-function EIKUtility_21(value)
-    if value == nil then
-        return 21
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 21)
-    end
-    return value
-end
-
-function EIKUtility_22(value)
-    if value == nil then
-        return 22
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 22)
-    end
-    return value
-end
-
-function EIKUtility_23(value)
-    if value == nil then
-        return 23
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 23)
-    end
-    return value
-end
-
-function EIKUtility_24(value)
-    if value == nil then
-        return 24
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 24)
-    end
-    return value
-end
-
-function EIKUtility_25(value)
-    if value == nil then
-        return 25
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 25)
-    end
-    return value
-end
-
-function EIKUtility_26(value)
-    if value == nil then
-        return 26
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 26)
-    end
-    return value
-end
-
-function EIKUtility_27(value)
-    if value == nil then
-        return 27
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 27)
-    end
-    return value
-end
-
-function EIKUtility_28(value)
-    if value == nil then
-        return 28
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 28)
-    end
-    return value
-end
-
-function EIKUtility_29(value)
-    if value == nil then
-        return 29
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 29)
-    end
-    return value
-end
-
-function EIKUtility_30(value)
-    if value == nil then
-        return 30
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 30)
-    end
-    return value
-end
-
-function EIKUtility_31(value)
-    if value == nil then
-        return 31
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 31)
-    end
-    return value
-end
-
-function EIKUtility_32(value)
-    if value == nil then
-        return 32
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 32)
-    end
-    return value
-end
-
-function EIKUtility_33(value)
-    if value == nil then
-        return 33
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 33)
-    end
-    return value
-end
-
-function EIKUtility_34(value)
-    if value == nil then
-        return 34
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 34)
-    end
-    return value
-end
-
-function EIKUtility_35(value)
-    if value == nil then
-        return 35
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 35)
-    end
-    return value
-end
-
-function EIKUtility_36(value)
-    if value == nil then
-        return 36
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 36)
-    end
-    return value
-end
-
-function EIKUtility_37(value)
-    if value == nil then
-        return 37
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 37)
-    end
-    return value
-end
-
-function EIKUtility_38(value)
-    if value == nil then
-        return 38
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 38)
-    end
-    return value
-end
-
-function EIKUtility_39(value)
-    if value == nil then
-        return 39
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 39)
-    end
-    return value
-end
-
-function EIKUtility_40(value)
-    if value == nil then
-        return 40
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 40)
-    end
-    return value
-end
-
-function EIKUtility_41(value)
-    if value == nil then
-        return 41
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 41)
-    end
-    return value
-end
-
-function EIKUtility_42(value)
-    if value == nil then
-        return 42
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 42)
-    end
-    return value
-end
-
-function EIKUtility_43(value)
-    if value == nil then
-        return 43
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 43)
-    end
-    return value
-end
-
-function EIKUtility_44(value)
-    if value == nil then
-        return 44
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 44)
-    end
-    return value
-end
-
-function EIKUtility_45(value)
-    if value == nil then
-        return 45
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 45)
-    end
-    return value
-end
-
-function EIKUtility_46(value)
-    if value == nil then
-        return 46
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 46)
-    end
-    return value
-end
-
-function EIKUtility_47(value)
-    if value == nil then
-        return 47
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 47)
-    end
-    return value
-end
-
-function EIKUtility_48(value)
-    if value == nil then
-        return 48
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 48)
-    end
-    return value
-end
-
-function EIKUtility_49(value)
-    if value == nil then
-        return 49
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 49)
-    end
-    return value
-end
-
-function EIKUtility_50(value)
-    if value == nil then
-        return 50
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 50)
-    end
-    return value
-end
-
-function EIKUtility_51(value)
-    if value == nil then
-        return 51
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 51)
-    end
-    return value
-end
-
-function EIKUtility_52(value)
-    if value == nil then
-        return 52
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 52)
-    end
-    return value
-end
-
-function EIKUtility_53(value)
-    if value == nil then
-        return 53
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 53)
-    end
-    return value
-end
-
-function EIKUtility_54(value)
-    if value == nil then
-        return 54
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 54)
-    end
-    return value
-end
-
-function EIKUtility_55(value)
-    if value == nil then
-        return 55
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 55)
-    end
-    return value
-end
-
-function EIKUtility_56(value)
-    if value == nil then
-        return 56
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 56)
-    end
-    return value
-end
-
-function EIKUtility_57(value)
-    if value == nil then
-        return 57
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 57)
-    end
-    return value
-end
-
-function EIKUtility_58(value)
-    if value == nil then
-        return 58
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 58)
-    end
-    return value
-end
-
-function EIKUtility_59(value)
-    if value == nil then
-        return 59
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 59)
-    end
-    return value
-end
-
-function EIKUtility_60(value)
-    if value == nil then
-        return 60
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 60)
-    end
-    return value
-end
-
-function EIKUtility_61(value)
-    if value == nil then
-        return 61
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 61)
-    end
-    return value
-end
-
-function EIKUtility_62(value)
-    if value == nil then
-        return 62
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 62)
-    end
-    return value
-end
-
-function EIKUtility_63(value)
-    if value == nil then
-        return 63
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 63)
-    end
-    return value
-end
-
-function EIKUtility_64(value)
-    if value == nil then
-        return 64
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 64)
-    end
-    return value
-end
-
-function EIKUtility_65(value)
-    if value == nil then
-        return 65
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 65)
-    end
-    return value
-end
-
-function EIKUtility_66(value)
-    if value == nil then
-        return 66
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 66)
-    end
-    return value
-end
-
-function EIKUtility_67(value)
-    if value == nil then
-        return 67
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 67)
-    end
-    return value
-end
-
-function EIKUtility_68(value)
-    if value == nil then
-        return 68
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 68)
-    end
-    return value
-end
-
-function EIKUtility_69(value)
-    if value == nil then
-        return 69
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 69)
-    end
-    return value
-end
-
-function EIKUtility_70(value)
-    if value == nil then
-        return 70
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 70)
-    end
-    return value
-end
-
-function EIKUtility_71(value)
-    if value == nil then
-        return 71
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 71)
-    end
-    return value
-end
-
-function EIKUtility_72(value)
-    if value == nil then
-        return 72
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 72)
-    end
-    return value
-end
-
-function EIKUtility_73(value)
-    if value == nil then
-        return 73
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 73)
-    end
-    return value
-end
-
-function EIKUtility_74(value)
-    if value == nil then
-        return 74
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 74)
-    end
-    return value
-end
-
-function EIKUtility_75(value)
-    if value == nil then
-        return 75
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 75)
-    end
-    return value
-end
-
-function EIKUtility_76(value)
-    if value == nil then
-        return 76
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 76)
-    end
-    return value
-end
-
-function EIKUtility_77(value)
-    if value == nil then
-        return 77
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 77)
-    end
-    return value
-end
-
-function EIKUtility_78(value)
-    if value == nil then
-        return 78
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 78)
-    end
-    return value
-end
-
-function EIKUtility_79(value)
-    if value == nil then
-        return 79
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 79)
-    end
-    return value
-end
-
-function EIKUtility_80(value)
-    if value == nil then
-        return 80
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 80)
-    end
-    return value
-end
-
-function EIKUtility_81(value)
-    if value == nil then
-        return 81
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 81)
-    end
-    return value
-end
-
-function EIKUtility_82(value)
-    if value == nil then
-        return 82
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 82)
-    end
-    return value
-end
-
-function EIKUtility_83(value)
-    if value == nil then
-        return 83
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 83)
-    end
-    return value
-end
-
-function EIKUtility_84(value)
-    if value == nil then
-        return 84
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 84)
-    end
-    return value
-end
-
-function EIKUtility_85(value)
-    if value == nil then
-        return 85
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 85)
-    end
-    return value
-end
-
-function EIKUtility_86(value)
-    if value == nil then
-        return 86
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 86)
-    end
-    return value
-end
-
-function EIKUtility_87(value)
-    if value == nil then
-        return 87
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 87)
-    end
-    return value
-end
-
-function EIKUtility_88(value)
-    if value == nil then
-        return 88
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 88)
-    end
-    return value
-end
-
-function EIKUtility_89(value)
-    if value == nil then
-        return 89
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 89)
-    end
-    return value
-end
-
-function EIKUtility_90(value)
-    if value == nil then
-        return 90
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 90)
-    end
-    return value
-end
-
-function EIKUtility_91(value)
-    if value == nil then
-        return 91
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 91)
-    end
-    return value
-end
-
-function EIKUtility_92(value)
-    if value == nil then
-        return 92
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 92)
-    end
-    return value
-end
-
-function EIKUtility_93(value)
-    if value == nil then
-        return 93
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 93)
-    end
-    return value
-end
-
-function EIKUtility_94(value)
-    if value == nil then
-        return 94
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 94)
-    end
-    return value
-end
-
-function EIKUtility_95(value)
-    if value == nil then
-        return 95
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 95)
-    end
-    return value
-end
-
-function EIKUtility_96(value)
-    if value == nil then
-        return 96
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 96)
-    end
-    return value
-end
-
-function EIKUtility_97(value)
-    if value == nil then
-        return 97
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 97)
-    end
-    return value
-end
-
-function EIKUtility_98(value)
-    if value == nil then
-        return 98
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 98)
-    end
-    return value
-end
-
-function EIKUtility_99(value)
-    if value == nil then
-        return 99
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 99)
-    end
-    return value
-end
-
-function EIKUtility_100(value)
-    if value == nil then
-        return 100
-    end
-    if type(value) == "number" then
-        return clampNumber(value, -100000, 100000, 100)
-    end
-    return value
-end
 
 task.spawn(function()
     while not State.Destroyed do
@@ -2532,94 +2111,442 @@ task.spawn(function()
     end
 end)
 
-BeamSection:AddToggle("BeamDetection",{Text="Beam Detection",Default=true,Callback=function(v) DETECTION_ENABLED=v if not v then restoreAll() end end})
-BeamSection:AddSlider("CheckInterval",{Text="Check Interval",Default=CHECK_INTERVAL,Min=.03,Max=.3,Rounding=2,Suffix="s",Callback=function(v) CHECK_INTERVAL=v end})
+MaterialNames = {}
+for _,material in ipairs(Enum.Material:GetEnumItems()) do table.insert(MaterialNames,material.Name) end
+table.sort(MaterialNames)
 
-palletColorLabel=PalletColorSection:AddLabel("Grabbed Color")
-palletColorLabel:AddColorPicker("PalletChangeColor",{Default=PALLET_CHANGE_COLOR,Title="Grabbed Color",Callback=function(v) PALLET_CHANGE_COLOR=v end})
-PalletColorSection:AddButton({Text="Restore Pallet Colors",Func=restoreAll})
+function applyPalletMaterial(pallet,materialName)
+    if not pallet or not pallet.Parent then return end
+    rememberPalletState(pallet)
+    local material=Enum.Material[materialName]
+    if not material then return end
+    for _,part in ipairs(getBaseParts(pallet)) do
+        if part and part.Parent then part.Material=material part.MaterialVariant="" end
+    end
+end
 
-UtilitySection:AddButton({Text="Restore All",Func=restoreAll})
-UtilitySection:AddButton({Text="Refresh EIK",Func=refreshAllEIK})
+function setPalletColorFadeInTime(value)
+    PalletColorFadeInTime=clampNumber(value,0,2,0.22)
+end
 
-EIKSection:AddInput("EIKText",{Text="Custom Pallet Text",Default="EIK",Placeholder="EIK",Numeric=false,Finished=true,Callback=function(v) EIK_TEXT=tostring(v) if EIK_TEXT=="" then EIK_TEXT="EIK" end updateAllEIK() end})
-EIKSection:AddSlider("EIKScale",{Text="Scale",Default=EIK_SCALE,Min=0,Max=100,Rounding=2,Callback=function(v) EIK_SCALE=v updateAllEIK() end})
-EIKSection:AddSlider("EIKThickness",{Text="Thickness",Default=EIK_THICKNESS,Min=0,Max=10,Rounding=2,Callback=function(v) EIK_THICKNESS=v updateAllEIK() end})
+function setPalletMaterialFadeInTime(value)
+    PalletMaterialFadeInTime=clampNumber(value,0,2,0.5)
+end
 
-eikColorLabel=EIKSection:AddLabel("Text Color")
-eikColorLabel:AddColorPicker("EIKTextColor",{Default=EIK_TEXT_COLOR,Title="Text Color",Callback=function(v) EIK_TEXT_COLOR=v for _,data in pairs(EIK_DATA) do if data.text then data.text.TextColor3=v end if data.stroke then data.stroke.Color=v end end end})
+function setPalletColorFadeOutTime(value)
+    PalletColorFadeOutTime=clampNumber(value,0,2,0.22)
+end
 
-EIKSection:AddSlider("EIKPositionX",{Text="Position X",Default=EIK_X,Min=-5,Max=5,Rounding=2,Callback=function(v) EIK_X=v updateAllEIK() end})
-EIKSection:AddSlider("EIKPositionY",{Text="Position Y",Default=EIK_Y,Min=-2,Max=2,Rounding=2,Callback=function(v) EIK_Y=v updateAllEIK() end})
-EIKSection:AddSlider("EIKPositionZ",{Text="Position Z",Default=EIK_Z,Min=-5,Max=5,Rounding=2,Callback=function(v) EIK_Z=v updateAllEIK() end})
-EIKSection:AddButton({Text="Reset EIK",Func=function()
-    EIK_SCALE=1 EIK_THICKNESS=2 EIK_X=0 EIK_Y=0 EIK_Z=0 EIK_TEXT="EIK"
-    if Options.EIKScale then Options.EIKScale:SetValue(1) end
-    if Options.EIKThickness then Options.EIKThickness:SetValue(2) end
-    if Options.EIKPositionX then Options.EIKPositionX:SetValue(0) end
-    if Options.EIKPositionY then Options.EIKPositionY:SetValue(0) end
-    if Options.EIKPositionZ then Options.EIKPositionZ:SetValue(0) end
-    if Options.EIKText then Options.EIKText:SetValue("EIK") end
-    updateAllEIK()
-end})
+function setPalletMaterialFadeOutTime(value)
+    PalletMaterialFadeOutTime=clampNumber(value,0,2,0.5)
+end
 
-CameraSection:AddSlider("FOV",{Text="FOV",Default=CurrentFOV,Min=50,Max=120,Rounding=0,Callback=function(v) CurrentFOV=v applyFOV() saveSettings() end})
-CameraSection:AddButton({Text="Reset FOV",Func=function() CurrentFOV=DEFAULT_FOV if Options.FOV then Options.FOV:SetValue(DEFAULT_FOV) end applyFOV() saveSettings() end})
+function refreshPalletText()
+    rebuildPalletText()
+end
 
-GrabLineSection:AddDropdown("GrabLineTexture",{Text="Texture",Values={"Low Quality","Non-Gamepass","Gamepass","Chain","Chain 2","Chain 3","Chain 4","Rope","Spring"},Default=CurrentGrabLineTexture,Multi=false,Callback=function(v) CurrentGrabLineTexture=v refreshGrabLine() end})
-GrabLineUtilitySection:AddButton({Text="Refresh Grab Line",Func=refreshGrabLine})
-GrabLineUtilitySection:AddButton({Text="Low Quality",Func=function() CurrentGrabLineTexture="Low Quality" if Options.GrabLineTexture then Options.GrabLineTexture:SetValue("Low Quality") end refreshGrabLine() end})
+SunTextureId=""
+function setSunTexture(value)
+    SunTextureId=tostring(value or "")
+    local sky=Lighting:FindFirstChildOfClass("Sky")
+    if not sky then
+        sky=Instance.new("Sky")
+        sky.Name="HuracanSky"
+        sky.Parent=Lighting
+    end
+    sky.SunTextureId=SunTextureId
+end
 
-TimeSection:AddSlider("Time",{Text="Day Time",Default=CurrentTime,Min=0,Max=24,Rounding=1,Suffix="h",Callback=function(v) CurrentTime=v Lighting.ClockTime=v end})
-TimeSection:AddButton({Text="Night Time",Func=function()
-    CurrentTime=0 CurrentBrightness=.5 CurrentExposure=-1 CurrentAmbient=Color3.fromRGB(8,10,18) CurrentOutdoorAmbient=Color3.fromRGB(3,5,12)
-    Lighting.ClockTime=0 Lighting.Brightness=.5 Lighting.ExposureCompensation=-1 Lighting.Ambient=CurrentAmbient Lighting.OutdoorAmbient=CurrentOutdoorAmbient
-    local a=getAtmosphere() a.Color=Color3.fromRGB(20,25,50) a.Density=.2 a.Haze=1 a.Glare=0
-    if Options.Time then Options.Time:SetValue(0) end
-    if Options.Brightness then Options.Brightness:SetValue(.5) end
-    if Options.Exposure then Options.Exposure:SetValue(-1) end
-end})
+SkyPresetNames={"Default","HD","Clear","Sunset","Night","Foggy","Grey"}
+function applySkyPreset(name)
+    name=tostring(name or "Default")
+    if name=="Default" then restoreLighting() return end
+    local a=getAtmosphere()
+    if name=="HD" then
+        Lighting.Brightness=2.2
+        Lighting.ExposureCompensation=0.25
+        Lighting.Ambient=Color3.fromRGB(150,150,150)
+        Lighting.OutdoorAmbient=Color3.fromRGB(185,185,185)
+        a.Color=Color3.fromRGB(205,220,255)
+        a.Decay=Color3.fromRGB(120,135,170)
+        a.Density=0.08
+        a.Haze=0.15
+        a.Glare=0.15
+    elseif name=="Clear" then
+        Lighting.Brightness=2
+        Lighting.ExposureCompensation=0
+        Lighting.Ambient=Color3.fromRGB(180,180,180)
+        Lighting.OutdoorAmbient=Color3.fromRGB(200,200,200)
+        a.Color=Color3.fromRGB(220,235,255)
+        a.Decay=Color3.fromRGB(170,190,220)
+        a.Density=0.02
+        a.Haze=0
+        a.Glare=0.05
+    elseif name=="Sunset" then
+        Lighting.ClockTime=18.3
+        Lighting.Brightness=1.4
+        Lighting.ExposureCompensation=0
+        Lighting.Ambient=Color3.fromRGB(105,65,55)
+        Lighting.OutdoorAmbient=Color3.fromRGB(150,90,65)
+        a.Color=Color3.fromRGB(255,170,120)
+        a.Decay=Color3.fromRGB(170,80,50)
+        a.Density=0.12
+        a.Haze=1.2
+        a.Glare=0.35
+    elseif name=="Night" then
+        Lighting.ClockTime=0
+        Lighting.Brightness=.5
+        Lighting.ExposureCompensation=-1
+        Lighting.Ambient=Color3.fromRGB(8,10,18)
+        Lighting.OutdoorAmbient=Color3.fromRGB(3,5,12)
+        a.Color=Color3.fromRGB(20,25,50)
+        a.Decay=Color3.fromRGB(8,10,25)
+        a.Density=.2
+        a.Haze=1
+        a.Glare=0
+    elseif name=="Foggy" then
+        Lighting.Brightness=1
+        Lighting.ExposureCompensation=0
+        Lighting.Ambient=Color3.fromRGB(125,125,125)
+        Lighting.OutdoorAmbient=Color3.fromRGB(145,145,145)
+        a.Color=Color3.fromRGB(185,185,185)
+        a.Decay=Color3.fromRGB(125,125,125)
+        a.Density=.55
+        a.Haze=4
+        a.Glare=0
+    elseif name=="Grey" then
+        Lighting.Brightness=1.2
+        Lighting.ExposureCompensation=0
+        Lighting.Ambient=Color3.fromRGB(100,100,100)
+        Lighting.OutdoorAmbient=Color3.fromRGB(110,110,110)
+        a.Color=Color3.fromRGB(135,135,135)
+        a.Decay=Color3.fromRGB(80,80,80)
+        a.Density=.35
+        a.Haze=2
+        a.Glare=0
+    end
+end
+
+function getPalletHighlight(pallet)
+    if not pallet then return nil end
+    local h=pallet:FindFirstChild("HuracanPalletGlow")
+    if h and h:IsA("Highlight") then return h end
+    return nil
+end
+
+function updatePalletGlow()
+    for pallet in pairs(Pallets) do
+        if pallet and pallet.Parent then
+            local h=getPalletHighlight(pallet)
+            if PalletGlowEnabled then
+                if not h then
+                    h=Instance.new("Highlight")
+                    h.Name="HuracanPalletGlow"
+                    h.DepthMode=Enum.HighlightDepthMode.Occluded
+                    h.Parent=pallet
+                end
+                h.Enabled=true
+                h.FillColor=copyColor(PalletGlowColor)
+                h.OutlineColor=copyColor(PalletGlowColor)
+                h.FillTransparency=PalletGlowFill
+                h.OutlineTransparency=PalletGlowOutline
+            elseif h then
+                h:Destroy()
+            end
+        end
+    end
+end
+
+function setPalletGlowEnabled(value)
+    PalletGlowEnabled=value==true
+    updatePalletGlow()
+end
+
+function setPalletGlowColor(value)
+    PalletGlowColor=copyColor(value)
+    updatePalletGlow()
+end
+
+function setPalletGlowFill(value)
+    PalletGlowFill=clampNumber(value,0,1,.65)
+    updatePalletGlow()
+end
+
+function setPalletGlowOutline(value)
+    PalletGlowOutline=clampNumber(value,0,1,0)
+    updatePalletGlow()
+end
+
+function setFullbright(value)
+    FullbrightEnabled=value==true
+    if FullbrightEnabled then
+        if not FullbrightSaved then
+            FullbrightSaved={Brightness=Lighting.Brightness,Ambient=Lighting.Ambient,OutdoorAmbient=Lighting.OutdoorAmbient,Exposure=Lighting.ExposureCompensation}
+        end
+        Lighting.Brightness=3
+        Lighting.Ambient=Color3.new(1,1,1)
+        Lighting.OutdoorAmbient=Color3.new(1,1,1)
+        Lighting.ExposureCompensation=1
+    elseif FullbrightSaved then
+        Lighting.Brightness=FullbrightSaved.Brightness
+        Lighting.Ambient=FullbrightSaved.Ambient
+        Lighting.OutdoorAmbient=FullbrightSaved.OutdoorAmbient
+        Lighting.ExposureCompensation=FullbrightSaved.Exposure
+        FullbrightSaved=nil
+    end
+end
+
+function setFogDisabled(value)
+    FogDisabled=value==true
+    local a=getSkyAtmosphere()
+    if not a then return end
+    if FogDisabled then
+        if OriginalFog==nil then OriginalFog={Density=a.Density,Haze=a.Haze,Glare=a.Glare} end
+        a.Density=0
+        a.Haze=0
+        a.Glare=0
+    elseif OriginalFog then
+        a.Density=OriginalFog.Density
+        a.Haze=OriginalFog.Haze
+        a.Glare=OriginalFog.Glare
+        OriginalFog=nil
+    end
+end
+
+function setCameraSwayEnabled(value) CameraSwayEnabled=value==true end
+function setCameraSwayAmount(value) CameraSwayAmount=clampNumber(value,0,5,1.2) end
+function setCameraSwaySpeed(value) CameraSwaySpeed=clampNumber(value,.1,5,1.5) end
+
+function setSunRaysEnabled(value)
+    local e=Lighting:FindFirstChild("HuracanSunRays")
+    if not e then e=Instance.new("SunRaysEffect") e.Name="HuracanSunRays" e.Parent=Lighting end
+    e.Enabled=value==true
+    e.Intensity=SunRaysIntensity
+    e.Spread=SunRaysSpread
+end
+
+function setSunRaysIntensity(value)
+    SunRaysIntensity=clampNumber(value,0,1,0.08)
+    local e=Lighting:FindFirstChild("HuracanSunRays")
+    if e then e.Intensity=SunRaysIntensity end
+end
+
+function setSunRaysSpread(value)
+    SunRaysSpread=clampNumber(value,0,1,0.5)
+    local e=Lighting:FindFirstChild("HuracanSunRays")
+    if e then e.Spread=SunRaysSpread end
+end
+function setNightMode(value)
+    NightModeEnabled=value==true
+    if NightModeEnabled then
+        CurrentTime=0 CurrentBrightness=.5 CurrentExposure=-1
+        CurrentAmbient=Color3.fromRGB(8,10,18)
+        CurrentOutdoorAmbient=Color3.fromRGB(3,5,12)
+        Lighting.ClockTime=0 Lighting.Brightness=.5 Lighting.ExposureCompensation=-1
+        Lighting.Ambient=CurrentAmbient Lighting.OutdoorAmbient=CurrentOutdoorAmbient
+        local a=getAtmosphere() a.Color=Color3.fromRGB(20,25,50) a.Density=.2 a.Haze=1 a.Glare=0
+    else
+        restoreLighting()
+    end
+end
+function setTimeLock(value) TimeLockEnabled=value==true end
+function setTimeLockSpeed(value) TimeLockSpeed=clampNumber(value,-10,10,0) end
+function setAmbientIntensity(value)
+    TimeAmbientIntensity=clampNumber(value,0,2,1)
+    Lighting.Ambient=Color3.new(CurrentAmbient.R*TimeAmbientIntensity,CurrentAmbient.G*TimeAmbientIntensity,CurrentAmbient.B*TimeAmbientIntensity)
+end
+function setOutdoorIntensity(value)
+    TimeOutdoorIntensity=clampNumber(value,0,2,1)
+    Lighting.OutdoorAmbient=Color3.new(CurrentOutdoorAmbient.R*TimeOutdoorIntensity,CurrentOutdoorAmbient.G*TimeOutdoorIntensity,CurrentOutdoorAmbient.B*TimeOutdoorIntensity)
+end
+function setAtmosphereHazeExtra(value) TimeAtmosphereHaze=clampNumber(value,0,5,0) getAtmosphere().Haze=TimeAtmosphereHaze end
+function setAtmosphereGlareExtra(value) TimeAtmosphereGlare=clampNumber(value,0,2,0) getAtmosphere().Glare=TimeAtmosphereGlare end
+function setAtmosphereDensityExtra(value) TimeAtmosphereDensity=clampNumber(value,0,1,0) getAtmosphere().Density=TimeAtmosphereDensity end
+
+RunService.Heartbeat:Connect(function(dt)
+    if TimeLockEnabled and TimeLockSpeed~=0 then
+        CurrentTime=(CurrentTime+TimeLockSpeed*dt)%24
+        Lighting.ClockTime=CurrentTime
+    end
+end)
+
+
+BeamSection:AddToggle("BeamDetection",{Text="Beam Detection",Default=true,Callback=function(v) DETECTION_ENABLED=v==true if not DETECTION_ENABLED then restoreAll() end end})
+BeamSection:AddSlider("CheckInterval",{Text="Detection Interval",Default=CHECK_INTERVAL,Min=.03,Max=.3,Rounding=2,Suffix="s",Callback=function(v) CHECK_INTERVAL=v end})
+
+PalletColorSection:AddToggle("DontChangePalletColor",{Text="Don't Change Pallet Color",Default=DontChangePalletColor,Callback=function(v) setDontChangePalletColor(v) if updateColorFadeVisibility then updateColorFadeVisibility() end end})
+local palletColorLabel=PalletColorSection:AddLabel("Grabbed Color")
+palletColorLabel:AddColorPicker("PalletChangeColor",{Default=PALLET_CHANGE_COLOR,Title="Grabbed Color",Callback=function(v) PALLET_CHANGE_COLOR=v if not DontChangePalletColor then setPalletFadeSettings() end end})
+PalletColorSection:AddSlider("PalletTransparency",{Text="Transparency",Default=PalletTransparency,Min=0,Max=25,Rounding=1,Callback=setPalletTransparency})
+ColorFadeInSlider=PalletColorSection:AddSlider("PalletColorFadeInTime",{Text="Color Fade In",Default=PalletColorFadeInTime,Min=0,Max=2,Rounding=2,Suffix="s",Callback=setPalletColorFadeInTime})
+ColorFadeOutSlider=PalletColorSection:AddSlider("PalletColorFadeOutTime",{Text="Color Fade Out",Default=PalletColorFadeOutTime,Min=0,Max=2,Rounding=2,Suffix="s",Callback=setPalletColorFadeOutTime})
+function updateColorFadeVisibility()
+    local visible=DontChangePalletColor==true
+    if ColorFadeInSlider then pcall(function() ColorFadeInSlider:SetVisible(visible) end) end
+    if ColorFadeOutSlider then pcall(function() ColorFadeOutSlider:SetVisible(visible) end) end
+end
+updateColorFadeVisibility()
+
+MaterialSection:AddDropdown("PalletMaterial",{Text="Material",Values=MaterialNames,Default="WoodPlanks",Searchable=true,Callback=setPalletMaterialSelection})
+MaterialSection:AddToggle("MaterialAlwaysOn",{Text="Material Always On",Default=MaterialAlwaysOn,Callback=function(v) setMaterialAlwaysOn(v) if updateMaterialFadeVisibility then updateMaterialFadeVisibility() end end})
+MaterialFadeInSlider=MaterialSection:AddSlider("PalletMaterialFadeInTime",{Text="Material Fade In",Default=PalletMaterialFadeInTime,Min=0,Max=2,Rounding=2,Suffix="s",Callback=setPalletMaterialFadeInTime})
+MaterialFadeOutSlider=MaterialSection:AddSlider("PalletMaterialFadeOutTime",{Text="Material Fade Out",Default=PalletMaterialFadeOutTime,Min=0,Max=2,Rounding=2,Suffix="s",Callback=setPalletMaterialFadeOutTime})
+function updateMaterialFadeVisibility()
+    local visible=not MaterialAlwaysOn
+    if MaterialFadeInSlider then pcall(function() MaterialFadeInSlider:SetVisible(visible) end) end
+    if MaterialFadeOutSlider then pcall(function() MaterialFadeOutSlider:SetVisible(visible) end) end
+end
+updateMaterialFadeVisibility()
+MaterialSection:AddButton({Text="Restore Original Material",Func=function() MaterialAlwaysOn=false if Toggles.MaterialAlwaysOn then Toggles.MaterialAlwaysOn:SetValue(false) end for pallet in pairs(Pallets) do if pallet and pallet.Parent then destroyMaterialFadeOverlays(pallet) restoreOriginalMaterialOnly(pallet) end end end})
+
+PalletTextSection:AddToggle("RemovePalletText",{Text="Remove Pallet Text",Default=RemovePalletText,Callback=setRemovePalletText})
+PalletTextSection:AddToggle("PalletTextOnlyOwnPallet",{Text="Only Show Text On Held Pallet",Default=PalletTextOnlyOwnPallet,Callback=function(value) PalletTextOnlyOwnPallet=value==true updateVisiblePalletText() end})
+PalletTextSection:AddToggle("PalletTextOnlyVisible",{Text="Visible Check Text",Default=PalletTextOnlyVisible,Callback=function(value) PalletTextOnlyVisible=value==true updateVisiblePalletText() end})
+PalletTextSection:AddInput("PalletTextText",{Text="Pallet Text",Default=PalletText_TEXT,Placeholder="Pallet",Numeric=false,Finished=true,Callback=setPalletTextText})
+PalletTextSection:AddDropdown("PalletTextFont",{Text="Font",Values=FontNames,Default="GothamBlack",Searchable=true,Callback=setPalletTextFont})
+PalletTextSection:AddSlider("PalletTextScale",{Text="Scale",Default=PalletText_SCALE,Min=0,Max=100,Rounding=2,Callback=setPalletTextScaleValue})
+PalletTextSection:AddSlider("PalletTextThickness",{Text="Thickness",Default=PalletText_THICKNESS,Min=0,Max=10,Rounding=2,Callback=setPalletTextThicknessValue})
+local textColorLabel=PalletTextSection:AddLabel("Text Color")
+textColorLabel:AddColorPicker("PalletTextTextColor",{Default=PalletText_TEXT_COLOR,Title="Text Color",Callback=setPalletTextTextColor})
+PalletTextSection:AddSlider("PalletTextPositionX",{Text="Position X",Default=PalletText_X,Min=-5,Max=5,Rounding=2,Callback=setPalletTextX})
+PalletTextSection:AddSlider("PalletTextPositionY",{Text="Position Y",Default=PalletText_Y,Min=-2,Max=2,Rounding=2,Callback=setPalletTextY})
+PalletTextSection:AddSlider("PalletTextPositionZ",{Text="Position Z",Default=PalletText_Z,Min=-5,Max=5,Rounding=2,Callback=setPalletTextZ})
+PalletTextSection:AddButton({Text="Rebuild Pallet Text",Func=rebuildPalletText})
+PalletTextSection:AddButton({Text="Reset Text Styling",Func=function() resetPalletTextValues() refreshAllPalletText() end})
+
+UtilitySection:AddButton({Text="Restore All",Func=restoreEverything})
+UtilitySection:AddButton({Text="Re-register Pallets",Func=registerExistingPallets})
+
+CameraSection:AddSlider("FOV",{Text="FOV",Default=CurrentFOV,Min=50,Max=120,Rounding=0,Callback=setCameraFOV})
+CameraSection:AddButton({Text="Reset FOV",Func=resetCamera})
+
+GrabLineSection:AddDropdown("GrabLineTexture",{Text="Texture",Values={"Low Quality","Non-Gamepass","Gamepass","Chain","Chain 2","Chain 3","Chain 4","Rope","Spring"},Default=CurrentGrabLineTexture,Searchable=false,Callback=function(v) CurrentGrabLineTexture=v applySelectedGrabLine() end})
+local grabLineColorLabel=GrabLineSection:AddLabel("Line Color")
+grabLineColorLabel:AddColorPicker("GrabLineColor",{Default=CurrentGrabLineColor,Title="Grab Line Color",Callback=setGrabLineColor})
+GrabLineSection:AddSlider("GrabLineWidth",{Text="Width",Default=GrabLineWidth,Min=.05,Max=2,Rounding=2,Callback=function(v) GrabLineWidth=v local b=getGrabBeam() if b and GrabLineModified then b.Width0=v b.Width1=v end end})
+GrabLineSection:AddSlider("GrabLineTextureSpeed",{Text="Texture Speed",Default=GrabLineTextureSpeed,Min=-20,Max=20,Rounding=1,Callback=function(v) GrabLineTextureSpeed=v local b=getGrabBeam() if b and GrabLineModified then b.TextureSpeed=v end end})
+GrabLineSection:AddSlider("GrabLineTextureLength",{Text="Texture Length",Default=GrabLineTextureLength,Min=.1,Max=10,Rounding=1,Callback=function(v) GrabLineTextureLength=v local b=getGrabBeam() if b and GrabLineModified then b.TextureLength=v end end})
+GrabLineSection:AddSlider("GrabLineSegments",{Text="Segments",Default=GrabLineSegments,Min=1,Max=50,Rounding=0,Callback=function(v) GrabLineSegments=v local b=getGrabBeam() if b and GrabLineModified then b.Segments=v end end})
+GrabLineSection:AddSlider("GrabLineBrightness",{Text="Brightness",Default=GrabLineBrightness,Min=0,Max=5,Rounding=1,Callback=function(v) GrabLineBrightness=v local b=getGrabBeam() if b and GrabLineModified then b.Brightness=v end end})
+GrabLineSection:AddButton({Text="Apply Selected Line",Func=applySelectedGrabLine})
+GrabLineSection:AddButton({Text="Restore Original Line",Func=refreshGrabLine})
+
+TimeSection:AddSlider("Time",{Text="Day Time",Default=CurrentTime,Min=0,Max=24,Rounding=1,Suffix="h",Callback=setLightingClock})
+TimeSection:AddToggle("NightMode",{Text="Night Preset",Default=NightModeEnabled,Callback=setNightMode})
+TimeSection:AddToggle("TimeLock",{Text="Animate Time",Default=TimeLockEnabled,Callback=setTimeLock})
+TimeSection:AddSlider("TimeLockSpeed",{Text="Time Speed",Default=TimeLockSpeed,Min=-10,Max=10,Rounding=2,Callback=setTimeLockSpeed})
 TimeSection:AddButton({Text="Restore Lighting",Func=restoreLighting})
 
-skyLabel=LightingSection:AddLabel("Sky Color")
-skyLabel:AddColorPicker("SkyColor",{Default=Color3.fromRGB(199,199,199),Title="Sky Color",Callback=function(v) getAtmosphere().Color=v end})
-ambientLabel=LightingSection:AddLabel("Ambient")
-ambientLabel:AddColorPicker("Ambient",{Default=CurrentAmbient,Title="Ambient",Callback=function(v) CurrentAmbient=v Lighting.Ambient=v end})
-outdoorLabel=LightingSection:AddLabel("Outdoor Ambient")
-outdoorLabel:AddColorPicker("OutdoorAmbient",{Default=CurrentOutdoorAmbient,Title="Outdoor Ambient",Callback=function(v) CurrentOutdoorAmbient=v Lighting.OutdoorAmbient=v end})
-LightingSection:AddSlider("Brightness",{Text="Brightness",Default=CurrentBrightness,Min=0,Max=5,Rounding=2,Callback=function(v) CurrentBrightness=v Lighting.Brightness=v end})
-LightingSection:AddSlider("Exposure",{Text="Exposure",Default=CurrentExposure,Min=-3,Max=3,Rounding=2,Callback=function(v) CurrentExposure=v Lighting.ExposureCompensation=v end})
-LightingSection:AddSlider("AtmosphereDensity",{Text="Atmosphere Density",Default=0,Min=0,Max=1,Rounding=2,Callback=function(v) getAtmosphere().Density=v end})
+local skyLabel=LightingSection:AddLabel("Sky Color")
+skyLabel:AddColorPicker("SkyColor",{Default=Color3.fromRGB(199,199,199),Title="Sky Color",Callback=function(v) local a=getAtmosphere() a.Color=v a.Decay=v:Lerp(Color3.new(0,0,0),.35) end})
+local ambientLabel=LightingSection:AddLabel("Ambient")
+ambientLabel:AddColorPicker("Ambient",{Default=CurrentAmbient,Title="Ambient",Callback=setLightingAmbient})
+local outdoorLabel=LightingSection:AddLabel("Outdoor Ambient")
+outdoorLabel:AddColorPicker("OutdoorAmbient",{Default=CurrentOutdoorAmbient,Title="Outdoor Ambient",Callback=setLightingOutdoorAmbient})
+LightingSection:AddSlider("Brightness",{Text="Brightness",Default=CurrentBrightness,Min=0,Max=5,Rounding=2,Callback=setLightingBrightness})
+LightingSection:AddSlider("Exposure",{Text="Exposure",Default=CurrentExposure,Min=-3,Max=3,Rounding=2,Callback=setLightingExposure})
+LightingSection:AddInput("SunTexture",{Text="Sun Texture ID",Default=SunTextureId,Finished=true,Callback=setSunTexture})
+LightingSection:AddToggle("SunRays",{Text="Sun Rays",Default=false,Callback=setSunRaysEnabled})
+LightingSection:AddSlider("SunRaysIntensity",{Text="Sun Rays Intensity",Default=SunRaysIntensity,Min=0,Max=1,Rounding=2,Callback=setSunRaysIntensity})
+LightingSection:AddSlider("SunRaysSpread",{Text="Sun Rays Spread",Default=SunRaysSpread,Min=0,Max=1,Rounding=2,Callback=setSunRaysSpread})
 
-VisualSettingsSection:AddToggle("GreySky",{Text="Grey Sky",Default=false,Callback=function(v) GreySkyEnabled=v applyGreySky() end})
-VisualSettingsSection:AddButton({Text="Reset Visuals",Func=function() GreySkyEnabled=false if Toggles.GreySky then Toggles.GreySky:SetValue(false) end restoreLighting() end})
-WeatherSection:AddToggle("Snow",{Text="Snow",Default=false,Callback=function(v) SnowEnabled=v updateSnow() end})
-WeatherSection:AddSlider("SnowRange",{Text="Snow Range",Default=SnowRange,Min=0,Max=1000,Rounding=0,Suffix=" studs",Callback=function(v) SnowRange=v updateSnow() end})
-WeatherSection:AddSlider("SnowAmount",{Text="Snow Amount",Default=SnowAmount,Min=0,Max=500,Rounding=0,Callback=function(v) SnowAmount=v updateSnow() end})
-WeatherSection:AddSlider("SnowSpeed",{Text="Snow Speed",Default=SnowSpeed,Min=1,Max=30,Rounding=1,Callback=function(v) SnowSpeed=v updateSnow() end})
+SkyPresetNames={"Default","HD","Clear","Sunset","Night","Foggy","Grey"}
+VisualSettingsSection:AddDropdown("SkyPreset",{Text="Sky Preset",Values=SkyPresetNames,Default="Default",Searchable=false,Callback=applySkyPreset})
+VisualSettingsSection:AddToggle("GreySky",{Text="Grey Sky",Default=false,Callback=setGreySkyState})
+VisualSettingsSection:AddToggle("PalletGlow",{Text="Pallet Glow",Default=PalletGlowEnabled,Callback=setPalletGlowEnabled})
+local glowColorLabel=VisualSettingsSection:AddLabel("Glow Color")
+glowColorLabel:AddColorPicker("PalletGlowColor",{Default=PalletGlowColor,Title="Glow Color",Callback=setPalletGlowColor})
+VisualSettingsSection:AddSlider("PalletGlowFill",{Text="Glow Fill",Default=PalletGlowFill,Min=0,Max=1,Rounding=2,Callback=setPalletGlowFill})
+VisualSettingsSection:AddSlider("PalletGlowOutline",{Text="Glow Outline",Default=PalletGlowOutline,Min=0,Max=1,Rounding=2,Callback=setPalletGlowOutline})
+VisualSettingsSection:AddToggle("Fullbright",{Text="Fullbright",Default=FullbrightEnabled,Callback=setFullbright})
+VisualSettingsSection:AddToggle("NoFog",{Text="No Fog",Default=FogDisabled,Callback=setFogDisabled})
+VisualSettingsSection:AddButton({Text="Reset Visuals",Func=function() GreySkyEnabled=false restoreLighting() PalletGlowEnabled=false updatePalletGlow() setFullbright(false) setFogDisabled(false) if Toggles.GreySky then Toggles.GreySky:SetValue(false) end if Toggles.PalletGlow then Toggles.PalletGlow:SetValue(false) end if Toggles.Fullbright then Toggles.Fullbright:SetValue(false) end if Toggles.NoFog then Toggles.NoFog:SetValue(false) end end})
 
-MenuKeySection:AddLabel("Menu Key"):AddKeyPicker("MenuKeybind",{Default="RightShift",Text="Menu Key",NoUI=false})
-ScriptSection:AddButton({Text="Restore Everything",Func=function() DETECTION_ENABLED=true SnowEnabled=false GreySkyEnabled=false restoreAll() restoreLighting() if SnowEmitter then SnowEmitter.Enabled=false end end})
-ScriptSection:AddButton({Text="Disable All & Close",Func=function()
-    DETECTION_ENABLED=false SnowEnabled=false GreySkyEnabled=false restoreAll() restoreLighting()
-    if SnowPart then SnowPart:Destroy() SnowPart=nil SnowEmitter=nil end
-    pcall(function() Library:Unload() end)
-end})
+WeatherSection:AddToggle("Snow",{Text="Snow",Default=false,Callback=setSnowState})
+WeatherSection:AddSlider("SnowRange",{Text="Snow Range",Default=SnowRange,Min=0,Max=1000,Rounding=0,Suffix=" studs",Callback=setSnowRange})
+WeatherSection:AddSlider("SnowAmount",{Text="Snow Amount",Default=SnowAmount,Min=0,Max=500,Rounding=0,Callback=setSnowAmount})
+WeatherSection:AddSlider("SnowSpeed",{Text="Snow Speed",Default=SnowSpeed,Min=1,Max=30,Rounding=1,Callback=setSnowSpeed})
+
+MenuKeySection:AddLabel("Menu Key"):AddKeyPicker("MenuKeybind",{Default="RightShift",Text="Menu Key",Mode="Toggle",NoUI=false})
+if Options.MenuKeybind then Library.ToggleKeybind=Options.MenuKeybind end
+ScriptSection:AddButton({Text="Restore All",Func=restoreEverything})
+ScriptSection:AddButton({Text="Disable All & Close",Func=disableEverything})
+
+ThemeManager=nil
+SaveManager=nil
+do
+    local okTheme,theme=pcall(function() return loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/addons/ThemeManager.lua"))() end)
+    if okTheme and type(theme)=="table" then ThemeManager=theme end
+    local okSave,save=pcall(function() return loadstring(game:HttpGet("https://raw.githubusercontent.com/deividcomsono/Obsidian/main/addons/SaveManager.lua"))() end)
+    if okSave and type(save)=="table" then SaveManager=save end
+end
+if ThemeManager then
+    pcall(function()
+        ThemeManager:SetLibrary(Library)
+        ThemeManager:SetFolder("I_Love_Huracan")
+        ThemeManager:ApplyToTab(MenuSettingsTab)
+    end)
+end
+if SaveManager then
+    pcall(function()
+        SaveManager:SetLibrary(Library)
+        SaveManager:SetFolder("I_Love_Huracan")
+        SaveManager:SetLoadingOrder(true,{"Toggle","Dropdown","ColorPicker","Slider","Input","KeyPicker"})
+        SaveManager:BuildConfigSection(MenuSettingsTab)
+    end)
+    task.defer(function() pcall(function() SaveManager:LoadAutoloadConfig() end) end)
+end
 
 task.defer(function()
     local grabParts=Workspace:FindFirstChild("GrabParts")
     if grabParts then watchGrabParts(grabParts) end
-    for pallet in pairs(Pallets) do if pallet and pallet.Parent then createEIK(pallet) end end
-    refreshGrabLine()
+    for pallet in pairs(Pallets) do if pallet and pallet.Parent then createPalletText(pallet) end end
+    local beam=getGrabBeam()
+    if beam then captureBeamState(beam,true) end
+end)
+
+task.spawn(function()
+    while task.wait(.05) do
+        local t=os.clock()
+        for pallet in pairs(Pallets) do
+            if pallet and pallet.Parent then
+                if PalletPulseEnabled or PalletRainbowEnabled then
+                    for _,part in ipairs(getBaseParts(pallet)) do
+                        if PalletRainbowEnabled then
+                            part.Color=Color3.fromHSV((t*PalletRainbowSpeed)%1,0.75,1)
+                        elseif PalletPulseEnabled then
+                            local pulse=(math.sin(t*PalletPulseSpeed)+1)/2
+                            local base=PALLET_CHANGE_COLOR
+                            part.Color=base:Lerp(Color3.new(1,1,1),pulse*.35)
+                        end
+                    end
+                end
+            end
+        end
+    end
 end)
 
 if type(Library.OnUnload) == "function" then
 Library:OnUnload(function()
-    DETECTION_ENABLED=false SnowEnabled=false restoreAll() restoreLighting()
+    DETECTION_ENABLED=false
+    SnowEnabled=false
+    for pallet in pairs(Pallets) do
+        if pallet and pallet.Parent then
+            destroyMaterialFadeOverlays(pallet)
+            restoreRememberedPalletState(pallet)
+            destroyPalletText(pallet)
+        end
+    end
+    restoreOriginalBeam()
+    restoreLighting()
     if SnowPart then SnowPart:Destroy() SnowPart=nil SnowEmitter=nil end
-    for pallet in pairs(Pallets) do if pallet and pallet.Parent then destroyEIK(pallet) end end
-    table.clear(EIK_DATA)
+    PalletGlowEnabled=false
+    updatePalletGlow()
+    setFullbright(false)
+    setFogDisabled(false)
+    table.clear(PalletText_DATA)
     table.clear(Pallets)
     table.clear(PalletState)
+    table.clear(OriginalPalletState)
 end)
 end
